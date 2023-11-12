@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Léo Belzile" />
+
+<meta name="date" content="2023-11-11" />
+
+<title>Nonparametric maximum likelihood estimation for survival data</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Nonparametric maximum likelihood estimation
+for survival data</h1>
+<h4 class="author">Léo Belzile</h4>
+<h4 class="date">2023-11-11</h4>
+
+
+
+<p>The <code>longevity</code> package includes an implementation of
+Turnbull’s EM algorithm for the empirical distribution function for data
+subject to arbitrary censoring and truncation patterns.</p>
+<p>For example, we can consider the interval censored data considered in
+<span class="citation">Lindsey and Ryan (1998)</span>. The
+<code>left</code> and <code>right</code> give respectively.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(longevity)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>left <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">15</span>,<span class="dv">12</span>,<span class="dv">17</span>,<span class="dv">13</span>,<span class="dv">0</span>,<span class="dv">6</span>,<span class="dv">0</span>,<span class="dv">14</span>,<span class="dv">12</span>,<span class="dv">13</span>,<span class="dv">12</span>,<span class="dv">12</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">3</span>,<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">13</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">6</span>,<span class="dv">0</span>,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">2</span>,<span class="dv">0</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>right <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">16</span>, <span class="fu">rep</span>(<span class="cn">Inf</span>, <span class="dv">4</span>), <span class="dv">24</span>, <span class="cn">Inf</span>, <span class="dv">15</span>, <span class="fu">rep</span>(<span class="cn">Inf</span>, <span class="dv">5</span>), <span class="dv">18</span>, <span class="dv">14</span>, <span class="dv">17</span>, <span class="dv">15</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>           <span class="cn">Inf</span>, <span class="cn">Inf</span>, <span class="dv">11</span>, <span class="dv">19</span>, <span class="dv">6</span>, <span class="dv">11</span>, <span class="cn">Inf</span>, <span class="dv">6</span>, <span class="dv">12</span>, <span class="dv">17</span>, <span class="dv">14</span>, <span class="dv">25</span>, <span class="dv">11</span>, <span class="dv">14</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>test <span class="ot">&lt;-</span> <span class="fu">np_elife</span>(<span class="at">time =</span> left,   <span class="co"># left bound for time</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>                 <span class="at">time2 =</span> right, <span class="co"># right bound for time</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>                 <span class="at">type =</span> <span class="st">&quot;interval2&quot;</span>, <span class="co"># data are interval censored</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>                 <span class="at">event =</span> <span class="dv">3</span>) <span class="co"># specify interval censoring, argument recycled</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="fu">plot</span>(test)</span></code></pre></div>
+<div class="figure">
+<img src="data:image/png;base64,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" alt="Nonparametric maximum likelihood estimate of the distribution function for the AIDS data" width="80%" />
+<p class="caption">
+Nonparametric maximum likelihood estimate of the distribution function
+for the AIDS data
+</p>
+</div>
+<p>We can also extract the equivalence classes and compare them to <span class="citation">Lindsey and Ryan (1998)</span>: these match the values
+returned in the paper. The summary statistics reported by the
+<code>print</code> method include the restricted mean, which is computed
+by calculating the area under the survival curve.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>test<span class="sc">$</span>xval</span></code></pre></div>
+<pre><code>##      left right
+## [1,]    4     6
+## [2,]   13    14
+## [3,]   15    16
+## [4,]   17    18</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">print</span>(test)</span></code></pre></div>
+<pre><code>## Nonparametric maximum likelihood estimator
+## 
+## Routine converged 
+## Number of equivalence classes: 4 
+## Restricted mean at upper bound 18 : 10.47143 
+## Quartiles of the survival function: 15.5 14 8</code></pre>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-Lindsey.Ryan:1998" class="csl-entry">
+Lindsey, Jane C., and Louise M. Ryan. 1998. <span>“Methods for
+Interval-Censored Data.”</span> <em>Statistics in Medicine</em> 17 (2):
+219–38. <a href="https://doi.org/10.1002/(SICI)1097-0258(19980130)17:2&lt;219::AID-SIM735&gt;3.0.CO;2-O">https://doi.org/10.1002/(SICI)1097-0258(19980130)17:2&lt;219::AID-SIM735&gt;3.0.CO;2-O</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
