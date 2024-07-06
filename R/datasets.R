@@ -241,6 +241,7 @@
 
 
 #' @importFrom graphics abline
+#' @importFrom graphics lines
 #' @importFrom graphics arrows
 #' @importFrom graphics hist
 #' @importFrom graphics mtext

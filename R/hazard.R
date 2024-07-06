@@ -361,55 +361,55 @@ hazard_elife <- function(x,
   return(invisible(retv))
 }
 
-# #' @keywords internal
-# #' @export
-# plot.elife_hazard <-
-#   function(x,
-#            plot.type = c("base","ggplot"),
-#            plot = TRUE,
-#            ...){
-#     plot.type <- match.arg(plot.type)
-#     if(plot.type == "ggplot"){
-#     if(requireNamespace("ggplot2", quietly = TRUE)){
-#     } else{
-#       warning("`ggplot2` package is not installed. Switching to base R plots.")
-#       plot.type <- "base"
-#     }
-#   }
-#     if(plot.type == "ggplot"){
-#        g1 <- ggplot2::ggplot(data = data.frame(x = x$hazards,
-#                                               y = x$pll),
-#                             mapping = ggplot2::aes(x = .data[["x"]],
-#                                                    y = .data[["y"]])) +
-#         ggplot2::geom_hline(yintercept = -qchisq(x$level, 1)/2,
-#                             alpha = 0.5,
-#                             color = "grey",
-#                             linetype = "dashed") +
-#         ggplot2::geom_line() +
-#         ggplot2::labs(x = "hazard",
-#                       y = "profile log-likelihood") +
-#         ggplot2::geom_rug(inherit.aes = FALSE,
-#                           data = data.frame(x = c(x$confint, x$par)),
-#                           mapping = ggplot2::aes(x = .data[["x"]]),
-#                           sides = "b") +
-#         ggplot2::theme_classic()
-#       if(plot){
-#        print(g1)
-#       }
-#       return(invisible(g1))
-#     } else if(plot.type == "base"){
-#      # else base plot
-#   args <- list(...)
-#   args$x <- args$y <- args$xlab <- args$bty <- args$type <- args$ylab <- args$ylim <- args$panel.first <- NULL
-#   plot(x = x$hazards,
-#        y = x$pll,
-#        type = "l",
-#        bty = "l",
-#        xlab = "hazard",
-#        ylab = "profile log-likelihood",
-#        ylim = c(-5,0),
-#        panel.first = {
-#   abline(h = -qchisq(x$level, 1)/2, col = "gray")}, ...)
-#   rug(c(x$confint, x$par), ticksize = 0.05)
-# }
-# }
+#' #' @keywords internal
+#' #' @export
+#' plot.elife_hazard <-
+#'   function(x,
+#'            plot.type = c("base","ggplot"),
+#'            plot = TRUE,
+#'            ...){
+#'     plot.type <- match.arg(plot.type)
+#'     if(plot.type == "ggplot"){
+#'     if(requireNamespace("ggplot2", quietly = TRUE)){
+#'     } else{
+#'       warning("`ggplot2` package is not installed. Switching to base R plots.")
+#'       plot.type <- "base"
+#'     }
+#'   }
+#'     if(plot.type == "ggplot"){
+#'        g1 <- ggplot2::ggplot(data = data.frame(x = x$hazards,
+#'                                               y = x$pll),
+#'                             mapping = ggplot2::aes(x = .data[["x"]],
+#'                                                    y = .data[["y"]])) +
+#'         ggplot2::geom_hline(yintercept = -qchisq(x$level, 1)/2,
+#'                             alpha = 0.5,
+#'                             color = "grey",
+#'                             linetype = "dashed") +
+#'         ggplot2::geom_line() +
+#'         ggplot2::labs(x = "hazard",
+#'                       y = "profile log-likelihood") +
+#'         ggplot2::geom_rug(inherit.aes = FALSE,
+#'                           data = data.frame(x = c(x$confint, x$par)),
+#'                           mapping = ggplot2::aes(x = .data[["x"]]),
+#'                           sides = "b") +
+#'         ggplot2::theme_classic()
+#'       if(plot){
+#'        print(g1)
+#'       }
+#'       return(invisible(g1))
+#'     } else if(plot.type == "base"){
+#'      # else base plot
+#'   args <- list(...)
+#'   args$x <- args$y <- args$xlab <- args$bty <- args$type <- args$ylab <- args$ylim <- args$panel.first <- NULL
+#'   plot(x = x$hazards,
+#'        y = x$pll,
+#'        type = "l",
+#'        bty = "l",
+#'        xlab = "hazard",
+#'        ylab = "profile log-likelihood",
+#'        ylim = c(-5,0),
+#'        panel.first = {
+#'   abline(h = -qchisq(x$level, 1)/2, col = "gray")}, ...)
+#'   rug(c(x$confint, x$par), ticksize = 0.05)
+#' }
+#' }

@@ -4,6 +4,7 @@
 \alias{elife}
 \alias{qelife}
 \alias{pelife}
+\alias{selife}
 \alias{relife}
 \alias{delife}
 \alias{helife}
@@ -27,6 +28,16 @@ pelife(
   family = c("exp", "gp", "weibull", "gomp", "gompmake", "extgp", "extweibull", "perks",
     "perksmake", "beard", "beardmake"),
   lower.tail = TRUE,
+  log.p = FALSE
+)
+
+selife(
+  q,
+  rate,
+  scale,
+  shape,
+  family = c("exp", "gp", "weibull", "gomp", "gompmake", "extgp", "extweibull", "perks",
+    "perksmake", "beard", "beardmake"),
   log.p = FALSE
 )
 
@@ -79,7 +90,7 @@ helife(
 \item{log, log.p}{logical; if \code{TRUE}, values are returned on the logarithmic scale (default to \code{FALSE}).}
 }
 \value{
-depending on the function type, a vector of probabilities (\code{pelife}), quantiles (\code{qelife}), density (\code{delife}), or hazard (\code{helife}). The function \code{relife} returns a random sample of size \code{n} from the distribution.
+depending on the function type, a vector of probabilities (\code{pelife}), survival probabilities (\code{selife}), quantiles (\code{qelife}), density (\code{delife}), or hazard (\code{helife}). The function \code{relife} returns a random sample of size \code{n} from the distribution.
 }
 \description{
 Quantile, distribution, density and hazard functions of excess lifetime distribution

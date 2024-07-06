@@ -31,14 +31,14 @@ turnbull_intervals <- function(
   rcens <- ifelse(status %in% c(1L, 2L), time,
                   ifelse(status == 0L, Inf, time2))
   if(!is.null(rtrunc)){
-    rtrunc <- rtrunc[is.finite(rtrunc)]
+    rtrunc <- as.vector(rtrunc[is.finite(rtrunc)])
     #don't put Inf, otherwise wrong...
   }
   if(length(rtrunc) == 0L){ # NULL has length zero
     rtrunc <- numeric(0)
   }
   if(!is.null(ltrunc)){
-    ltrunc <- ltrunc[is.finite(ltrunc)]
+    ltrunc <- as.vector(ltrunc[is.finite(ltrunc)])
   }
   if(length(ltrunc) == 0L){
     ltrunc <- numeric(0)
@@ -71,6 +71,7 @@ turnbull_intervals <- function(
 #' @param tol double, relative tolerance for convergence of the EM algorithm
 #' @param weights double, vector of weights for the observations
 #' @param method string, one of \code{"em"} for expectation-maximization (EM) algorithm or \code{"sqp"} for sequential quadratic programming with augmented Lagrange multiplie method.
+#' @param maxiter integer, maximum number of iterations for the EM algorithm
 #' @param ... additional arguments, currently ignored
 #' @return a list with elements
 #' \itemize{
@@ -118,6 +119,7 @@ np_elife <- function(time,
                      weights = NULL,
                      method = c("em", "sqp"),
                      arguments = NULL,
+                     maxiter = 1e5L,
                      ...) {
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
@@ -169,18 +171,27 @@ np_elife <- function(time,
     }
     status <- status[ind]
     if(!is.null(ltrunc)){
-      ltrunc <- pmax(0, ltrunc[ind] - thresh[1])
+      if(isTRUE(all(is.matrix(ltrunc),  ncol(ltrunc) > 1))){
+        ltrunc <- apply(ltrunc[ind,] - thresh[1], 1:2, function(x){ pmax(0, x)})
+      } else{
+        ltrunc <- pmax(0, ltrunc[ind] - thresh[1])
+      }
     }
     if(!is.null(rtrunc)){
-      rtrunc <- rtrunc[ind] - thresh[1]
+      if(isTRUE(all(is.matrix(rtrunc), ncol(rtrunc) > 1))){
+        rtrunc <- apply(rtrunc[ind,] - thresh[1], 1:2, function(x){ pmax(0, x)})
+      } else{
+        rtrunc <- rtrunc[ind] - thresh[1]
+      }
     }
   }
-  if(!is.null(ltrunc)){
+  # End of threshold shifting
+  if(!is.null(ltrunc) & is.vector(ltrunc)){
     if(isTRUE(any(ltrunc > time, ltrunc > time2, na.rm = TRUE))){
       stop("Left-truncation must be lower than observation times.")
     }
   }
-  if(!is.null(rtrunc)){
+  if(!is.null(rtrunc) & is.vector(rtrunc)){
     if(isTRUE(any(rtrunc < time,
                   rtrunc < time2,
                   na.rm = TRUE))){
@@ -191,26 +202,42 @@ np_elife <- function(time,
   cens <- !isTRUE(all(status == 1L,
                       na.rm = TRUE))
   if (!is.null(rtrunc)) {
+    if(isTRUE(all(is.matrix(rtrunc), ncol(rtrunc) > 1))){
+      stopifnot(
+      "`rtrunc` should be the same length as `time`" =  nrow(rtrunc) == n
+      )
+    } else{
     stopifnot(
       "`rtrunc` should be a vector" = is.vector(rtrunc),
       "`rtrunc` should be the same length as `time`" =  length(rtrunc) == n
     )
+    }
   }
   if (!is.null(ltrunc)) {
+    if(isTRUE(all(is.matrix(ltrunc), ncol(ltrunc) > 1))){
+      stopifnot(
+        "`ltrunc` should be the same length as `time`" =  nrow(ltrunc) == n
+      )
+    } else{
       stopifnot(
       "`ltrunc` should be a vector" = is.vector(ltrunc),
       "`ltrunc` should be the same length as `dat`" =  length(ltrunc) == n
     )
-  }
-  if (!is.null(ltrunc) & !is.null(rtrunc)) {
-    stopifnot("`ltrunc` should be smaller than `rtrunc`" = isTRUE(all(ltrunc < rtrunc)))
+    }
   }
   if(is.null(ltrunc) && is.null(rtrunc)){
     trunc <- FALSE
   } else{
     trunc <- TRUE
+    stopifnot("`ltrunc` should be smaller than `rtrunc`" = isTRUE(all(ltrunc < rtrunc, na.rm = TRUE)))
   }
 
+  if(length(event) == 1L){
+    event <- rep(event, length(time))
+  }
+  if(is.matrix(ltrunc)){
+    method <- "em"
+  }
   # Dispatch methods
   if(method == "em"){
     return(
@@ -224,7 +251,8 @@ np_elife <- function(time,
         weights = weights,
         status = status,
         thresh = thresh,
-        arguments = NULL)
+        arguments = NULL,
+        maxiter = as.integer(maxiter))
       )
   } else if(method == "emR"){
   # unex <- turnbull_intervals(
@@ -420,8 +448,9 @@ np_elife <- function(time,
     invisible(structure(
       list(
         cdf = .wecdf(x = thresh + unex[,2], w = prob),
-        xval = unex,
+        xval = thresh + unex,
         prob = prob,
+        thresh = thresh,
         convergence = coptim$convergence == 0,
         niter = coptim$outer.iter),
       class = c("elife_npar", "npcdf")
@@ -433,20 +462,33 @@ np_elife <- function(time,
 print.elife_npar <- function(x, ...){
   # Compute restricted mean
   height <- 1-x$cdf(x$xval[,1]-1e-10)
-  width <- diff(c(0, x$xval[,1]))
-  rmean <- sum(height * width)
+  width <- diff(c(x$thresh, x$xval[,1]))
+  rmean <- sum(height * width) + x$thresh
   quants <- stats::quantile(x$cdf, c(0.75, 0.5, 0.25))
   cat("Nonparametric maximum likelihood estimator\n\n")
-
   cat("Routine", ifelse(x$convergence, "converged", "did not converge"), "\n")
   cat("Number of equivalence classes:", nrow(x$xval),"\n")
-  cat("Restricted mean at upper bound", x$xval[nrow(x$xval),2], ":", rmean,"\n")
+  if(x$cdf(x$xval[nrow(x$xval),2]) == 1){
+    cat("Mean: ", rmean,"\n")
+  } else{
+    cat("Restricted mean at upper bound", x$xval[nrow(x$xval),2], ":", rmean,"\n")
+  }
   cat("Quartiles of the survival function:", quants)
 }
 
 #' @export
 summary.elife_npar <- function(object, ...){
-  summary(object$cdf)
+  height <- 1-object$cdf(object$xval[,1]-1e-10)
+  width <- diff(c(object$thresh, object$xval[,1]))
+  rmean <- sum(height * width) + object$thresh
+  quant <- as.numeric(quantile(object$cdf, probs = c(0.25, 0.5, 0.75)))
+  # cat(paste0("NPMLE of CDF: ", nrow(object$xval), " equivalence classes with summary\n"))
+  c("Min." = min(object$xval),
+    "1st Qu." = quant[1],
+    "Median" = quant[2],
+    "Mean" = rmean,
+    "3rd Qu." = quant[3],
+    "Max." = max(object$xval))
 }
 
 #' @export
@@ -676,14 +718,16 @@ npsurv <- function(time,
   time <- survout$time
   time2 <- survout$time2
   status <- survout$status
- }
+  }
   n <- length(time)
   stopifnot(length(status) == n)
+  # Modified Jan. 2023 - pass truncation limits as vectors, removing NAs
+  # that would appear with doubly truncated results
   unex <- turnbull_intervals(time = time,
                              time2 = time2,
                              status = status,
-                             ltrunc = ltrunc,
-                             rtrunc = rtrunc)
+                             ltrunc = na.omit(as.numeric(ltrunc)),
+                             rtrunc = na.omit(as.numeric(rtrunc)))
   J <- nrow(unex)
   if(isTRUE(any(status != 1L))){
     cens <- TRUE
@@ -709,7 +753,7 @@ npsurv <- function(time,
       stop("Invalid argument \"tol\".")
     }
   } else{
-    tol <- 1e-12
+    tol <- 1e-8
   }
   if(!is.null(args$zerotol)){
     zerotol <- args$zerotol
@@ -725,9 +769,9 @@ npsurv <- function(time,
   if(!is.null(args$maxiter)){
     maxiter <- as.integer(args$maxiter)
     if(isTRUE(any(maxiter <= 1L,
-                  maxiter > 1e6,
+                  maxiter > 1e7,
                   !is.finite(maxiter)))){
-      stop("Invalid argument \"maxiter\": must be a finite integer no bigger than a million.")
+      stop("Invalid argument \"maxiter\": must be a finite integer no bigger than 1e7L.")
     }
   } else{
     maxiter <- 1e5L
@@ -737,6 +781,39 @@ npsurv <- function(time,
   } else{
     stopifnot("Weights must be positive and finite." = isTRUE(all(weights > 0)) & isTRUE(all(is.finite(weights))))
   }
+  # Check if double truncation
+  if(is.matrix(ltrunc)){
+    # Check dimensions
+    stopifnot(is.matrix(ltrunc),
+              ncol(ltrunc) == 2L,
+              ncol(rtrunc) == 2L,
+              nrow(ltrunc) == nrow(rtrunc),
+              nrow(ltrunc) == n)
+    if(!(isTRUE(all(time > ltrunc[,1] | time > ltrunc[,2])))){
+      stop("Some observed times are not part of the observation windows.")
+    }
+    if(!(isTRUE(all(time2 < rtrunc[,1] | time2 < rtrunc[,2])))){
+      stop("Some observed times are not part of the observation windows.")
+    }
+    if(!(isTRUE(all((time > ltrunc[,1] & time2 < rtrunc[,1]) |
+                    (time > ltrunc[,2] & time2 < rtrunc[,2]))))){
+      stop("Some censoring windows are not part of the observation windows.")
+    }
+
+    survfit_res <- .turnbull_em_dtrunc(
+      tsets = unex,
+      lcens = as.numeric(time),
+      rcens = as.numeric(time2),
+      ltrunc = as.matrix(ltrunc),
+      rtrunc = as.matrix(rtrunc),
+      cens = as.logical(cens),
+      zerotol = as.numeric(zerotol),
+      tol = as.numeric(tol),
+      maxiter = as.integer(maxiter),
+      trunc = as.logical(trunc),
+      weights = as.numeric(weights)
+    )
+  } else{
   survfit_res <- .turnbull_em(
     tsets = unex,
     lcens = as.numeric(time),
@@ -750,6 +827,7 @@ npsurv <- function(time,
     trunc = as.logical(trunc),
     weights = as.numeric(weights)
   )
+  }
   if(!survfit_res$conv){
     warning(paste("EM algorithm failed to converge after",
                   survfit_res$niter,
@@ -758,12 +836,12 @@ npsurv <- function(time,
   probs <- as.numeric(survfit_res$p)
   invisible(structure(
     list(cdf = .wecdf(x = thresh + unex[,2], w = probs),
-       xval = unex[probs > 0, ],
+       xval = thresh + unex[probs > 0, ],
        prob = probs[probs > 0],
-       # grad = as.numeric(survfit_res$grad),
+       thresh = thresh,
        niter = survfit_res$neval,
-       # abstol = survfit_res$abstol,
-       convergence = survfit_res$conv),
+       convergence = survfit_res$conv,
+       abstol = survfit_res$abstol),
     class = c("elife_npar", "npcdf")
   ))
 }

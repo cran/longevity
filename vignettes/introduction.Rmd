@@ -56,7 +56,6 @@ pointwise confidence intervals.
 
 ```{r}
 #| eval: true
-#| cache: true
 #| label: fig-tstab
 #| fig-cap: "Threshold stability plot with generalized Pareto shape estimates for Dutch data as a function of threshold (in years)."
 #| #| out-width: '80%'
@@ -73,22 +72,21 @@ plot(tstab_c,
      xlab = "threshold (age in days)")
 ```
 
-We can fit various parametric models and compare them using the `anova` call, provided they are nested and share the same data. Diagnostic plots, adapted for survival data, can be used to check goodness-of-fit. These may be computationally intensive to produce in large samples, since they require estimation of the nonparametric maximum likelihood estimator of the distribution function.
+We can fit various parametric models and compare them using the `anova` call, provided they are nested and share the same data. Diagnostic plots, adapted for survival data, can be used to check goodness-of-fit. These may be computationally intensive to produce in large samples, since they require estimation of the nonparametric maximum likelihood estimator of the distribution function. As such, we pick a relatively high threshold, 108 years, to reduce the computational burden.
 
 ```{r}
 #| label: fit-models
-#| cache: true
 #| warning: false
-#| fig-cap: "Quantile-quantile plot of generalized Pareto model to exceedances above 105 years for Dutch."
+#| fig-cap: "Quantile-quantile plot of generalized Pareto model to exceedances above 108 years for Dutch."
 #| fig-width: 8
 #| out-width: '80%'
 #| fig-height: 5
 (m1 <- fit_elife(arguments = args, 
-          thresh = 105 * 365.25,
+          thresh = 108 * 365.25,
           family = "gp",
           export = TRUE))
 m0 <- fit_elife(arguments = args, 
-          thresh = 105 * 365.25,
+          thresh = 108 * 365.25,
           family = "exp")
 anova(m1, m0)
 plot(m1, which.plot = "qq")
@@ -98,8 +96,3 @@ plot(m1, which.plot = "qq")
 
 ## References
 
-
-
-<script type="text/x-mathjax-config">
-   MathJax.Hub.Config({  "HTML-CSS": { minScaleAdjust: 125, availableFonts: [] }  });
-</script>

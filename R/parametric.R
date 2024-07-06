@@ -299,6 +299,7 @@ nll_elife <- function(par,
 #' false convergence diagnostic if it cannot.
 #' @param restart logical; should multiple starting values be attempted? Default to \code{FALSE}.
 #' @param arguments a named list specifying default arguments of the function that are common to all \code{elife} calls
+#' @param check logical; if \code{TRUE}, fit all submodels to ensure that simpler models fit worst or as well
 #' @param ... additional parameters, currently ignored
 #' @return an object of class \code{elife_par}
 #' @export
@@ -331,6 +332,7 @@ fit_elife <- function(time,
                       start = NULL,
                       restart = FALSE,
                       arguments = NULL,
+                      check = FALSE,
                       ...
 ){
   if(!is.null(arguments)){
@@ -353,7 +355,7 @@ fit_elife <- function(time,
     stopifnot("Censoring is not currently handled for doubly truncated data." = is.null(event) | isTRUE(all(event == 1L)),
               "Argument `time2` not used for doubly truncated data" = is.null(time2)
     )
-    fit_ditrunc_elife(
+    return(fit_ditrunc_elife(
       time = time,
       ltrunc1 = ltrunc[,1],
       rtrunc1 = rtrunc[,1],
@@ -364,7 +366,7 @@ fit_elife <- function(time,
       weights = weights,
       export = export,
       start = start,
-      restart = restart)
+      restart = restart))
   } else{
   if(is.null(status)){
     survout <- .check_surv(time = time,
@@ -379,7 +381,7 @@ fit_elife <- function(time,
   if(is.null(weights)){
     weights <- rep(1, length(time))
   } else{
-    stopifnot("All weights should be positive" = isTRUE(all(weights >=0 )))
+    stopifnot("All weights should be positive" = isTRUE(all(weights >=0)))
   }
   type <- match.arg(type)
   stopifnot("Threshold must be positive" = thresh >= 0,
@@ -426,6 +428,9 @@ fit_elife <- function(time,
   }
   # Keep maximum and sample size
   n <- length(time) #number of exceedances
+  if(n == 0L){
+    stop("No observation lies above the threshold.")
+  }
   dat <- ifelse(status == 2L, time2, time)
   maxdat <- max(dat)
   stopifnot("Incorrect data input: some entries are missing or infinite" = is.finite(maxdat))
@@ -439,7 +444,7 @@ fit_elife <- function(time,
       se_mle <- mle / sqrt(sum(weights))
       ll <- sum(weights*dexp(time, rate = 1/mle, log = TRUE))
       conv <- TRUE
-    } else if(is.null(rtrunc) && isTRUE(all(status %in% c(0L, 1L)))){
+    } else if(is.null(rtrunc) & isTRUE(all(status %in% c(0L, 1L))) & isTRUE(sum(status) > 0)){
       if(is.null(ltrunc)){
         ltrunc <- 0
       }
@@ -486,8 +491,13 @@ fit_elife <- function(time,
                        hessian = TRUE
       )
       mle <- opt_mle$par
-      vcov <- solve(opt_mle$hessian)
+      vcov <- try(solve(opt_mle$hessian), silent = TRUE)
+      if(inherits(vcov, "try-error")){
+        vcov <- NULL
+        se_mle <- NA
+      } else{
       se_mle <- sqrt(diag(vcov))
+      }
       ll <- -opt_mle$value
       conv <- opt_mle$convergence == 0
     }
@@ -571,7 +581,7 @@ fit_elife <- function(time,
                              ineqLB = ineqLB,
                              ineqUB = ineqUB,
                              control = list(trace = 0))
-    if(opt_mle$convergence != 0 | restart){
+    if(opt_mle$convergence != 0 & restart){
       opt_mle <- Rsolnp::gosolnp(LB = LB,
                                  UB = ifelse(is.finite(UB),
                                              UB, 10*maxdat),
@@ -595,7 +605,7 @@ fit_elife <- function(time,
     }
     mle <- opt_mle$pars
     vcov <- try(solve(opt_mle$hessian[-(seq_along(ineqLB)),-(seq_along(ineqLB))]))
-    if(is.character(vcov)){
+    if(inherits(vcov, "try-error")){
       vcov <- NULL
       se_mle <- rep(NA, length(mle))
     } else{
@@ -618,7 +628,7 @@ fit_elife <- function(time,
           "weibull" = c("scale","shape"),
           "extweibull" = c("scale","shape", "xi"),
           "gp" = c("scale","shape"),
-          "extgp" = c("scale","beta","gamma"),
+          "extgp" = c("scale","beta","xi"),
           "gppiece" = c("scale", paste0("shape",1:(length(mle)-1L))),
           "perks" = c("rate","shape"),
           "perksmake" = c("rate","lambda","shape"),
@@ -650,6 +660,139 @@ fit_elife <- function(time,
   if(ll == -1e20){
     conv <- FALSE
     warning("Algorithm did not converge: try changing the starting values.")
+  }
+  # Check that model is "optimal"
+  if(isTRUE(check[1]) & family != "exp"){
+    sub <- "exp"
+    if(family %in% c("extgp","gppiece","extweibull")){
+      sub <- c(sub, "gp")
+    }
+    if(family == "extweibull"){
+     sub <- c(sub, "weibull")
+    }
+    if(family %in% c("extgp","gompmake","beardmake","beard")){
+     sub <- c(sub, "gomp")
+    }
+    if(family == "beardmake"){
+     sub <- c(sub, "gompmake","beard","perksmake")
+    }
+    if(family %in% c("beard","perksmake")){
+     sub <- c(sub, "perks")
+    }
+  # Call all submodels and check fit
+  fits <- list()
+  for(fam in seq_along(sub)){
+    fits[[fam]] <- fit_elife(
+      time = time,
+      time2 = time2,
+      event = event,
+      family = sub[fam],
+      type = type,
+      ltrunc = ltrunc,
+      rtrunc = rtrunc,
+      thresh = thresh,
+      status = status,
+      weights = weights,
+      export = FALSE,
+      restart = restart,
+      check = FALSE)
+  }
+  # Extract log likelihood
+  devs <- sapply(fits, deviance)
+  best <- which.min(devs)
+  # Check if submodel fits better
+  if(isTRUE(min(devs) < -2*ll)){
+    # Submodel is better
+  bestsubfam <- fits[[best]]$family # extract family
+  # Match parameters
+  pars <- .matchpars(family0 = bestsubfam, family1 = family, coef = fits[[best]]$par)
+  # Call again function with optimal submodel as starting value
+  newopt <- fit_elife(
+    time = time,
+    time2 = time2,
+    event = event,
+    family = family,
+    type = type,
+    ltrunc = ltrunc,
+    rtrunc = rtrunc,
+    thresh = thresh,
+    status = status,
+    weights = weights,
+    export = FALSE,
+    start = pars$par,
+    restart = FALSE,
+    check = FALSE)
+  if(isTRUE(deviance(newopt) < devs[best])){
+   return(newopt)
+  }
+  # The submodel fits best
+  mle <- pars$par
+  # Compute negative log likelihood and hessian manually
+  llfn <- function(parv){
+    - nll_elife(time = time,
+                time2 = time2,
+                event = event,
+                family = family,
+                type = type,
+                ltrunc = ltrunc,
+                rtrunc = rtrunc,
+                thresh = thresh,
+                status = status,
+                weights = weights,
+                par = parv)
+  }
+  mle <- pars$par
+  ll <- llfn(parv = mle)
+  if(isTRUE(pars$regular)){
+    if(!(family %in% c("gp","extgp")) | mle[length(mle)] > -0.5){
+    hessian <- numDeriv::hessian(func = llfn, x = mle)
+    vcov <- try(solve(hessian))
+    }
+  } else{
+    vcov <- NULL
+    se_mle <- rep(NA, length(mle))
+  }
+   if(inherits(vcov, "try-error")){
+     vcov <- NULL
+     se_mle <- rep(NA, length(mle))
+   } else{
+     se_mle <- try(sqrt(diag(vcov)), silent = TRUE)
+   }
+   if(is.character(se_mle)){
+     se_mle <- rep(NA, length(mle))
+   }
+  if(length(se_mle) == 0L){
+    se_mle <- rep(NA, length(mle))
+  }
+   # The function returns -ll, and the value at each
+   # iteration (thus keep only the last one)
+   conv <- opt_mle$convergence == 0
+  }
+  names(mle) <- names(se_mle) <-
+    switch(family,
+           "exp" = c("scale"),
+           "gomp" = c("scale","shape"),
+           "gompmake" = c("scale","lambda","shape"),
+           "weibull" = c("scale","shape"),
+           "extweibull" = c("scale","shape", "xi"),
+           "gp" = c("scale","shape"),
+           "extgp" = c("scale","beta","xi"),
+           "gppiece" = c("scale", paste0("shape",1:(length(mle)-1L))),
+           "perks" = c("rate","shape"),
+           "perksmake" = c("rate","lambda","shape"),
+           "beard" = c("rate","alpha","beta"),
+           "beardmake" = c("rate","lambda","alpha","beta")
+    )
+  if(!is.null(vcov) & (is.matrix(vcov) & isTRUE(nrow(vcov) == length(mle)))){
+    # Name columns of vcov for confint.default routine
+    colnames(vcov) <- rownames(vcov) <- names(mle)
+  }
+
+  }
+  if(family %in% c("extgp","gp")){
+    if(mle[length(mle)] > 1.999){
+      conv <- FALSE
+    }
   }
   if(isTRUE(export)){
     ret <- structure(list(par = mle,
@@ -690,6 +833,83 @@ fit_elife <- function(time,
               class = "elife_par")
   }
 }
+
+.matchpars <- function(coef, family0, family1, thresh){
+  family0 <- match.arg(arg = family0,
+                       choices = c("exp", "gp", "weibull", "gomp",
+                                   "gompmake", "extgp", "gppiece", "extweibull",
+                                   "perks", "perksmake", "beard", "beardmake"),
+                       several.ok = FALSE)
+  family1 <- match.arg(arg = family1,
+                       choices = c("exp", "gp", "weibull", "gomp",
+                                   "gompmake", "extgp", "gppiece", "extweibull",
+                                   "perks", "perksmake", "beard", "beardmake"),
+                       several.ok = FALSE)
+  stopifnot(is.numeric(coef),
+            length(coef) == sum(.npar_elife(family = family0, return_npar = TRUE)))
+  nmods <- rbind(
+    c("exp", "weibull", "regular"),        # 1
+    c("exp", "gp", "regular"),             # 2
+    c("exp", "gppiece", "regular"),        # 3
+    c("exp", "gomp", "boundary"),          # 4
+    c("exp", "extgp", "boundary"),         # 5
+    c("exp", "gompmake", "invalid"),       # 6
+    c("gp", "extgp", "boundary"),          # 7
+    c("gomp", "extgp", "regular"),         # 8
+    c("gp", "gppiece", "regular"),         # 9
+    c("gomp", "gompmake", "boundary"),     # 10
+    c("weibull","extweibull","regular"),   # 11
+    c("gp","extweibull","regular"),        # 12
+    c("exp","extweibull","regular"),       # 13
+    c("exp", "perks","boundary"),          # 14
+    c("exp", "beard","boundary"),          # 15
+    c("gomp", "beard","boundary"),         # 16
+    c("perks", "beard","regular"),         # 17
+    c("perks", "perksmake","boundary"),    # 18
+    c("beard", "beardmake","boundary"),    # 19
+    c("perks", "beardmake","boundary"),    # 20
+    c("perksmake", "beardmake","regular"), # 21
+    c("gompmake", "beardmake","boundary"), # 22
+    c("gomp", "beardmake","boundary2"),    # 23
+    c("exp", "beardmake","invalid"),       # 24
+    c("exp", "perksmake","invalid")        # 25
+  )
+  ind <- intersect(which(family0 == nmods[,1]), which(family1 == nmods[,2]))
+  if(length(ind) == 0){
+    warning("Trying to constrain two non-nested models.")
+    return(NULL)
+  }
+  isRegular <- nmods[ind,3] == "regular"
+  pars <- switch(ind,
+                 c(coef, 1), # 1
+                 c(coef, 0), # 2
+                 c(coef, rep(0, length(thresh))), # 3
+                 c(coef, 0), # 4
+                 c(coef, rep(0, 2)), # 5
+                 c(coef, 0, 0), # 6
+                 c(coef[1], 0, coef[2]), # 7
+                 c(coef, 0), # 8
+                 c(coef, rep(0, length(thresh) - 1L)), # 9
+                 c(coef[1], 0, coef[2]), # 10
+                 c(coef, 0), # 11
+                 c(coef[1], 1, coef[2]), # 12
+                 c(coef, 1, 0), # 13
+                 c(0, 1/coef[1]), # 14
+                 c(0, 1/coef[1], 0), # 15
+                 c(coef[2]/coef[1],1/coef[1], 0), # 16
+                 c(coef, 1), # 17
+                 c(coef[1], 0, coef[2]), # 18
+                 c(coef[1], 0, coef[2:3]), # 19
+                 c(coef[1], 0, coef[2], 1), # 20
+                 c(coef, 1), # 21
+                 c(coef[3]/coef[1], coef[2], 1/coef[1], 0), # 22
+                 c(coef[2]/coef[1], 0, 1/coef[1], 0), # 23
+                 c(1/coef, 0, 0, 0), # 24
+                 c(1/coef, 0, 0) # 25
+)
+ list(par = pars, regular = isRegular)
+}
+
 
 .ineq_optim_elife <- function(dat, family, maxdat = max(dat), start = NULL, thresh){
   if(family == "gp"){
@@ -852,7 +1072,7 @@ print.elife_par <-
                          perks = "Perks",
                          perksmake = "Perks-Makeham",
                          beard = "Beard",
-                         bearmake = "Beard-Makeham"),
+                         beardmake = "Beard-Makeham"),
         "distribution.", "\n")
     if(x$cens_type != "none" || x$trunc_type != "none"){
       cat("Sampling: ",
@@ -868,8 +1088,10 @@ print.elife_par <-
     cat("\nEstimates\n")
     print.default(format(x$par, digits = digits), print.gap = 2, quote = FALSE, ...)
     if (!is.null(x$std.error)) {
+      if(!isTRUE(all(is.na(x$std.error)))){
       cat("\nStandard Errors\n")
       print.default(format(x$std.err, digits = digits), print.gap = 2, quote = FALSE, ...)
+      }
     }
     cat("\nOptimization Information\n")
     cat("  Convergence:", x$convergence, "\n")
@@ -899,6 +1121,19 @@ deviance.elife_par <- function(object, ...) {
   return(val)
 }
 
+
+#' @importFrom stats AIC
+#' @export
+AIC.elife_par <- function(object, ..., k = 2) {
+  val <- as.numeric(-2*object$loglik) + k * length(coef(object))
+  return(val)
+}
+
+#' @importFrom stats BIC
+#' @export
+BIC.elife_par <- function(object, ..., k = 2) {
+  AIC(object, ..., k = log(nobs(object)))
+}
 
 #' @importFrom stats nobs
 #' @export

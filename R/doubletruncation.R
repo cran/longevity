@@ -74,6 +74,14 @@ nll_ditrunc_elife <-
     if(!is.null(rtrunc2)){
       rtrunc2 <- pmax(0, rtrunc2[ind] - thresh[1])
     }
+    # Sometimes, the thresholding leads to ltrunc1=rtrunc1=0
+    bad <- which(rtrunc1 == 0)
+    if(length(bad) > 0){
+      ltrunc1[bad] <- ltrunc2[bad]
+      rtrunc1[bad] <- rtrunc2[bad]
+      ltrunc2[bad] <- NA
+      rtrunc2[bad] <- NA
+    }
   }
   # For gppiece model
   if(family == "gomp"){
@@ -159,6 +167,7 @@ nll_ditrunc_elife <-
       pgppiece(q = dat, scale = par[1], shape = par[-1], thresh = thresh, lower.tail = lower.tail, log.p = log.p)
     }
   }
+
   if(!is.null(rtrunc1)){
     rtr1_cont <- lsurvf(dat = rtrunc1, par = par, lower.tail = TRUE, log.p = FALSE)
   } else{
@@ -277,7 +286,17 @@ fit_ditrunc_elife <- function(
     if(!is.null(rtrunc2)){
       rtrunc2 <- pmax(0, rtrunc2[ind] - thresh[1])
     }
+    # Sometimes, the thresholding leads to ltrunc1=rtrunc1=0
+    bad <- which(rtrunc1 == 0)
+    if(length(bad) > 0){
+      ltrunc1[bad] <- ltrunc2[bad]
+      rtrunc1[bad] <- rtrunc2[bad]
+      ltrunc2[bad] <- NA
+      rtrunc2[bad] <- NA
+    }
   }
+
+
 
   # Keep maximum and sample size
   n <- length(time) #number of exceedances
@@ -310,8 +329,16 @@ fit_ditrunc_elife <- function(
                        hessian = TRUE
       )
       mle <- opt_mle$par
-      vcov <- solve(opt_mle$hessian)
-      se_mle <- sqrt(diag(vcov))
+      vcov <- try(solve(opt_mle$hessian))
+      if(is.character(vcov)){
+        vcov <- NULL
+        se_mle <- NA
+      } else{
+        se_mle <- try(sqrt(diag(vcov)))
+      }
+      if(is.character(se_mle)){
+        se_mle <- NA
+      }
       ll <- -opt_mle$value
       conv <- opt_mle$convergence == 0
     } else {
@@ -363,7 +390,9 @@ fit_ditrunc_elife <- function(
           ineqLB <- ineq_fn$ineqLB
           ineqUB <- ineq_fn$ineqUB
           hin <- ineq_fn$hin
-        }
+          start <- ineq_fn$start
+      }
+
     stopifnot("Invalid starting values." =
         nll_ditrunc_elife(par = start,
                           family = family,
@@ -389,7 +418,7 @@ fit_ditrunc_elife <- function(
                              ineqLB = ineqLB,
                              ineqUB = ineqUB,
                              control = list(trace = 0))
-    if(opt_mle$convergence != 0 | restart){
+    if(isTRUE(opt_mle$convergence != 0 | restart)){
       opt_mle <- Rsolnp::gosolnp(LB = LB,
                                  UB = ifelse(is.finite(UB), UB, 10*maxdat),
                                  family = family,
@@ -413,12 +442,12 @@ fit_ditrunc_elife <- function(
     vcov <- try(solve(opt_mle$hessian[-(seq_along(ineqLB)),-(seq_along(ineqLB))]))
     if(is.character(vcov)){
       vcov <- NULL
-      se_mle <- rep(NA, length(mle))
+      se_mle <- rep(NA, length(start))
     } else{
       se_mle <- try(sqrt(diag(vcov)))
     }
     if(is.character(se_mle)){
-      se_mle <- rep(NA, length(mle))
+      se_mle <- rep(NA, length(start))
     }
     # The function returns -ll, and the value at each
     # iteration (thus keep only the last one)
@@ -442,7 +471,7 @@ names(mle) <- names(se_mle) <-
   )
     cens_type <- "none"
 
-    if(!isTRUE(all(is.na(rtrunc2),is.na(ltrunc2)))){
+    if(!isTRUE(all(is.na(rtrunc2), is.na(ltrunc2)))){
       trunc_type <- "doubly interval truncated"
     } else{
       trunc_type <- "interval truncated"
@@ -450,7 +479,7 @@ names(mle) <- names(se_mle) <-
     if(ll == -1e20){
     conv <- FALSE
     warning("Algorithm did not converge: try changing the starting values.")
-  }
+    }
   if(isTRUE(export)){
 
     ret <- structure(list(par = mle,
@@ -463,10 +492,8 @@ names(mle) <- names(se_mle) <-
                    thresh = thresh,
                    time = time,
                    weights = weights,
-                   ltrunc1 = ltrunc1,
-                   rtrunc1 = rtrunc1,
-                   ltrunc2 = ltrunc2,
-                   rtrunc2 = rtrunc2,
+                   ltrunc = cbind(ltrunc1, ltrunc2),
+                   rtrunc = cbind(rtrunc1, rtrunc2),
                    cens_type = cens_type,
                    trunc_type = trunc_type),
               class = "elife_par")

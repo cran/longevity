@@ -12,7 +12,7 @@
 
 <meta name="author" content="Léo Belzile" />
 
-<meta name="date" content="2023-11-11" />
+<meta name="date" content="2024-07-05" />
 
 <title>Nonparametric maximum likelihood estimation for survival data</title>
 
@@ -51,7 +51,7 @@ overflow: visible;
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -150,6 +150,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; }
 div.csl-bib-body { }
 div.csl-entry {
 clear: both;
+margin-bottom: 0em;
 }
 .hanging div.csl-entry {
 margin-left:2em;
@@ -363,7 +364,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Nonparametric maximum likelihood estimation
 for survival data</h1>
 <h4 class="author">Léo Belzile</h4>
-<h4 class="date">2023-11-11</h4>
+<h4 class="date">2024-07-05</h4>
 
 
 
@@ -398,18 +399,19 @@ by calculating the area under the survival curve.</p>
 <pre><code>##      left right
 ## [1,]    4     6
 ## [2,]   13    14
-## [3,]   15    16
-## [4,]   17    18</code></pre>
+## [3,]   14    15
+## [4,]   15    16
+## [5,]   17    18</code></pre>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">print</span>(test)</span></code></pre></div>
 <pre><code>## Nonparametric maximum likelihood estimator
 ## 
 ## Routine converged 
-## Number of equivalence classes: 4 
-## Restricted mean at upper bound 18 : 10.47143 
+## Number of equivalence classes: 5 
+## Mean:  10.47143 
 ## Quartiles of the survival function: 15.5 14 8</code></pre>
 <div id="references" class="section level2 unnumbered">
 <h2 class="unnumbered">References</h2>
-<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0">
 <div id="ref-Lindsey.Ryan:1998" class="csl-entry">
 Lindsey, Jane C., and Louise M. Ryan. 1998. <span>“Methods for
 Interval-Censored Data.”</span> <em>Statistics in Medicine</em> 17 (2):

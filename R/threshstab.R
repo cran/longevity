@@ -182,6 +182,10 @@ tstab <- function(time,
   invisible(res)
 }
 
+#' Threshold stability plots
+#' @param x an object of class \code{elife_tstab} containing
+#' the fitted parameters as a function of threshold
+#' @inheritParams plot.elife_par
 #' @export
 plot.elife_tstab <- function(x,
                              plot.type = c("base", "ggplot"),

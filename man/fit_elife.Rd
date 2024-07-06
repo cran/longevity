@@ -20,6 +20,7 @@ fit_elife(
   start = NULL,
   restart = FALSE,
   arguments = NULL,
+  check = FALSE,
   ...
 )
 }
@@ -54,6 +55,8 @@ false convergence diagnostic if it cannot.}
 \item{restart}{logical; should multiple starting values be attempted? Default to \code{FALSE}.}
 
 \item{arguments}{a named list specifying default arguments of the function that are common to all \code{elife} calls}
+
+\item{check}{logical; if \code{TRUE}, fit all submodels to ensure that simpler models fit worst or as well}
 
 \item{...}{additional parameters, currently ignored}
 }

@@ -202,7 +202,7 @@ Rcpp::List turnbullem(
     bool trunc = true,
     double tol = 1e-12,
     double zerotol = 1e-10,
-    arma::uword maxiter = 1e5){
+    int maxiter = 1e5){
   arma::uword n = lcens.n_elem;
   // Create containers
   if(weights.n_elem != n){
@@ -254,7 +254,7 @@ Rcpp::List turnbullem(
   }
   arma::dvec mu(J);
   // Rcpp::Rcout << limits << std::endl;
-  while(!convergence && niter < maxiter){
+  while(!convergence && (bool)(niter < maxiter)){
     abstol = arma::max(arma::abs(pCur - pNew));
     // Check convergence of the method
     if((abstol < tol) && (niter > 1)){
@@ -332,3 +332,284 @@ Rcpp::List turnbullem(
                             Rcpp::Named("niter") = niter,
                             Rcpp::Named("KKT") = mle);
 }
+
+//' Identification sets for double truncated data
+//'
+//' @param tsets Turnbull's sets
+//' @param lcens numeric vector of left censoring
+//' @param rcens numeric vector of right censoring
+//' @param ltrunc numeric matrix of left truncation
+//' @param rtrunc numeric matrix of right truncation
+//' @param trunc logical are observation truncated?
+//' @export
+//' @return a matrix with the bounds of the intervals for Turnbull sets
+//' @keywords internal
+// [[Rcpp::export(.censTruncLimitsDtrunc)]]
+arma::umat censTruncLimitsDtrunc(
+     arma::dmat tsets,
+     arma::dvec lcens,
+     arma::dvec rcens,
+     arma::dmat ltrunc,
+     arma::dmat rtrunc,
+     bool trunc,
+     bool cens
+ ){
+   arma::uword n = lcens.n_elem;
+   if((lcens.n_elem != n) || (rcens.n_elem != n)){
+     Rcpp::stop("All vectors of censoring intervals should be of the same length.");
+   }
+   arma::uword J = tsets.n_rows;
+   if(tsets.n_cols != 2){
+     Rcpp::stop("\"tsets\" should be a matrix with two columns.");
+   }
+   if(ltrunc.n_cols != 2){
+     Rcpp::stop("\"ltrunc\" should be a matrix with two columns.");
+   }
+   if(rtrunc.n_cols != 2){
+     Rcpp::stop("\"rtrunc\" should be a matrix with two columns.");
+   }
+   if((ltrunc.n_rows != n) || (rtrunc.n_rows != n)){
+     Rcpp::stop("All truncations matrices should be of the same length as truncation.");
+   }
+   // Replace potential missing values in left/right truncation bounds by zero
+   ltrunc.elem( find_nonfinite(ltrunc) ).zeros();
+   rtrunc.elem( find_nonfinite(rtrunc) ).zeros();
+   double eps = sqrt(arma::datum::eps);
+   // Initialize containers
+   arma::umat bounds(n, 6, arma::fill::value(J));
+   // First two entries for censoring, four next for truncation
+   // Initialize to J, so modified after
+   // Columns correspond to censLow, censUpp, truncLow, truncUpp
+   for(arma::uword i = 0; i < n; ++i){
+     for(arma::uword j = 0; j < J; ++j){
+       // fully observed
+       if(fabs(rcens(i) - lcens(i)) < eps){ // check equality status == 1
+         // Compute I_{ij} for censoring - the description in Turnbull 1976 says the contrary...
+         // L_i, R_i should cover [q_j, p_j]
+         if((tsets(j,0) >= lcens(i)) && (tsets(j,1) <= rcens(i))){
+           // Initialized to J, so pick the smallest integer
+           if(j < bounds(i,0)){ // initialized to J, so true for the first
+             bounds(i,0) = j;
+           }
+           // Since sets are increasing, pick the largest
+           bounds(i,1) = j;
+         }
+       } else{ // Interval data, consider (left, right)
+         if((tsets(j,0) >= (lcens(i) + eps)) && (tsets(j,1) <= rcens(i))){
+           // Initialized to J, so pick the smallest integer
+           if(j < bounds(i,0)){ // initialized to J, so true for the first
+             bounds(i,0) = j;
+           }
+           // Since sets are increasing, pick the largest
+           bounds(i,1) = j;
+         }
+       }
+     }
+   }
+   if(!trunc){
+     for(arma::uword i = 0; i < n; ++i){
+       bounds(i,2) = 0;
+       bounds(i,3) = J - 1;
+     }
+   } else{
+     if((ltrunc.n_rows != n) | (rtrunc.n_rows != n)){
+       Rcpp::stop("All matrices of truncation intervals should be of the same length.");
+     }
+     for(arma::uword i = 0; i < n; ++i){
+       for(arma::uword j = 0; j < J; ++j){
+         if((ltrunc(i,0) <= tsets(j,0)) && (rtrunc(i,0) >= tsets(j,1)) && rtrunc(i,0) > 0){
+           // Initialized to J, so pick the smallest integer
+           if(j < bounds(i,2)){
+             bounds(i,2) = j;
+           }
+           // Since sets are increasing, pick the largest
+           bounds(i,3) = j;
+         }
+         if((ltrunc(i,1) <= tsets(j,0)) && (rtrunc(i,1) >= tsets(j,1)) && rtrunc(i,1) > 0){
+           // Initialized to J, so pick the smallest integer
+           if(j < bounds(i,4)){
+             bounds(i,4) = j;
+           }
+           // Since sets are increasing, pick the largest
+           bounds(i,5) = j;
+         }
+       }
+     }
+   }
+
+   // Intervals; if the value is J, then intervals are empty
+   return bounds;
+
+ }
+
+
+//' Turnbull EM algorithm (low storage implementation)
+//'
+//' @param tsets Turnbull's sets
+//' @param lcens numeric vector of left censoring
+//' @param rcens numeric vector of right censoring
+//' @param ltrunc numeric vector of left truncation
+//' @param rtrunc numeric vector of right truncation
+//' @param cens logical; if \code{FALSE}, then \code{censUpp = censLow} and a particular update can be avoided in the EM algorithm
+//' @param tol tolerance level for terminating the EM algorithm
+//' @param maxiter maximum number of iteration for the EM algorithm
+//' @param weights vector of weights for observations
+//' @return a list with the probabilities and the standard errors
+//' @keywords internal
+// [[Rcpp::export(.turnbull_em_dtrunc)]]
+Rcpp::List turnbull_em_dtrunc(
+     arma::dmat tsets,
+     arma::dvec lcens,
+     arma::dvec rcens,
+     arma::dmat ltrunc,
+     arma::dmat rtrunc,
+     arma::dvec weights,
+     bool cens = true,
+     bool trunc = true,
+     double tol = 1e-12,
+     double zerotol = 1e-10,
+     int maxiter = 1e5){
+   arma::uword n = lcens.n_elem;
+   // Create containers
+   if(weights.n_elem != n){
+     Rcpp::stop("Invalid weight vector");
+   }
+   if((lcens.n_elem != n) | (rcens.n_elem != n)){
+     Rcpp::stop("All vectors of censoring intervals should be of the same length.");
+   }
+   if(any(lcens > rcens)){
+     Rcpp::stop("Invalid arguments: \"lcens\" > \"rcens\" for some elements.");
+   }
+   arma::uword J = tsets.n_rows;
+   if(tsets.n_cols != 2){
+     Rcpp::stop("\"tsets\" should be a matrix with two columns.");
+   }
+
+   arma::umat limits = censTruncLimitsDtrunc(
+     tsets,
+     lcens,
+     rcens,
+     ltrunc,
+     rtrunc,
+     trunc,
+     cens);
+   arma::uvec censLow = limits.col(0);
+   arma::uvec censUpp = limits.col(1);
+   arma::uvec trunc1Low = limits.col(2);
+   arma::uvec trunc1Upp = limits.col(3);
+   arma::uvec trunc2Low = limits.col(4);
+   arma::uvec trunc2Upp = limits.col(5);
+
+   // Create containers
+   arma::dvec pCur(J);
+   arma::dvec grad(J);
+   arma::dvec pNew(J, arma::fill::zeros);
+   // Equiprobable initial value
+   pNew.fill(1/(double)J);
+   arma::dvec uiCum(J, arma::fill::zeros);
+   double sum_p = 0;
+   double abstol = 0;
+   int niter = 0;
+   int nviolation = 0;
+   bool convergence = false;
+   bool mle = true;
+   double N = arma::sum(weights);
+   // Lagrange multiplier of equality constraint
+   double mu0 = 0;
+   if(cens & !trunc){
+     mu0 = N;
+   } else if (!cens & trunc){
+     mu0 = -N;
+   }
+   arma::dvec mu(J);
+   // Rcpp::Rcout << limits << std::endl;
+   while(!convergence && niter < maxiter){
+     abstol = arma::max(arma::abs(pCur - pNew));
+     // Check convergence of the method
+     if((abstol < tol) && (niter > 1)){
+       // If difference is negligible, check the KKT conditions
+       nviolation = 0;
+       for(arma::uword j = 0; j < J; ++j){
+         if(pCur(j) > 0){
+           mu(j) = 0;
+         } else if(pCur(j) == 0){
+           mu(j) = mu0 - grad(j);
+           if(mu(j) <= 0){
+             nviolation += 1;
+             // Zero-ed component shouldn't be zero...
+             pCur(j) = 1.2*zerotol;
+           }
+         }
+       }
+       if(nviolation > 0){
+         mle = false;
+         convergence = false;
+         pCur = pCur/arma::sum(pCur);
+       } else{
+         convergence = true;
+       }
+     }
+
+     grad.zeros();
+     pCur = pNew;
+     Rcpp::checkUserInterrupt();
+     uiCum.zeros();
+     for(arma::uword i = 0; i < n; ++i){
+       // Censoring step - only
+       if(censLow(i) < J){
+         // This clause is not triggered unless there are censored observations
+         if(cens){
+           sum_p = arma::sum(pCur(arma::span(censLow(i), censUpp(i))));
+           for(arma::uword j = censLow(i); j <= censUpp(i); ++j){
+             uiCum(j) += weights(i) * pCur(j)/sum_p;
+             grad(j) += weights(i) / sum_p; //KKT conditions discussed in 2.2 of Gentleman and Geyer
+           }
+         } else {
+           uiCum(censLow(i)) +=  weights(i);
+           grad(censLow(i)) +=  weights(i); // since alpha_{ij}=1 for all, denominator is 1
+         }
+       }
+       if(trunc & (trunc1Low(i) < J)){
+         // Truncation step
+         sum_p = arma::sum(pCur(arma::span(trunc1Low(i), trunc1Upp(i))));
+         for(arma::uword j = 0; j < J; ++j){
+           if(j < trunc1Low(i) || j > trunc1Upp(i)){
+             uiCum(j) += weights(i) * pCur(j) / sum_p;
+           } else {
+             grad(j) -= weights(i) / sum_p; //NEW
+           }
+         }
+       }
+       // Nonempty bound
+       if(trunc & (trunc2Low(i) < J)){
+         // Truncation step
+         sum_p = arma::sum(pCur(arma::span(trunc2Low(i), trunc2Upp(i))));
+         for(arma::uword j = 0; j < J; ++j){
+           if(j < trunc2Low(i) || j > trunc2Upp(i)){
+             uiCum(j) += weights(i) * pCur(j) / sum_p;
+           } else {
+             grad(j) -= weights(i) / sum_p; //NEW
+           }
+         }
+       }
+     }
+     pNew = uiCum / arma::sum(uiCum);
+     // Rcpp::Rcout << pNew << std::endl;
+     // Zero-out probabilities that are negligible
+     for(arma::uword j = 0; j < J; ++j){
+       if(pNew(j) < zerotol){
+         pNew(j) = 0;
+       }
+     }
+     //NEW Check KKT conditions with the gradient after zeroing entries
+
+     pNew = pNew / arma::sum(pNew);
+     niter ++;
+   }
+   return Rcpp::List::create(Rcpp::Named("p") = pNew,
+                             Rcpp::Named("rgrad") = mu,
+                             Rcpp::Named("conv") = convergence,
+                             Rcpp::Named("abstol") = abstol,
+                             Rcpp::Named("niter") = niter,
+                             Rcpp::Named("KKT") = mle);
+ }

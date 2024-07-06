@@ -16,6 +16,7 @@ np_elife(
   weights = NULL,
   method = c("em", "sqp"),
   arguments = NULL,
+  maxiter = 100000L,
   ...
 )
 }
@@ -43,6 +44,8 @@ Although unusual, the event indicator can be omitted, in which case all subjects
 \item{method}{string, one of \code{"em"} for expectation-maximization (EM) algorithm or \code{"sqp"} for sequential quadratic programming with augmented Lagrange multiplie method.}
 
 \item{arguments}{a named list specifying default arguments of the function that are common to all \code{elife} calls}
+
+\item{maxiter}{integer, maximum number of iterations for the EM algorithm}
 
 \item{...}{additional arguments, currently ignored}
 }

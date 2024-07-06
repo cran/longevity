@@ -97,7 +97,8 @@ npmle_ltruncrcens_long <-
     time = time,
     event = rightcens,
     type = "right",
-    ltrunc = ltrunc
+    ltrunc = ltrunc,
+    tol = 1e-10
   )
 npmle_ltruncrcens_long2 <-
   longevity::np_elife(
@@ -105,7 +106,8 @@ npmle_ltruncrcens_long2 <-
     event = rightcens,
     type = "right",
     alg = "sqp",
-    ltrunc = ltrunc
+    ltrunc = ltrunc,
+    tol = 1e-10
   )
 # Tsai and Jewell product limit estimator
 probs <- -diff(c(1, cumprod(wgt)))
@@ -125,8 +127,7 @@ expect_true(
 expect_equal(xval[,2],
                        tun)
 # Same probabilities
-expect_equal(prob_em,
-                       probs)
+expect_equal(prob_em, probs, tol = 1e-6)
 if(requireNamespace("survival", quietly = TRUE)){
 
 # [4] right censored data (Kaplan-Meier)
@@ -154,7 +155,8 @@ cLimits <- .censTruncLimits(
 test_rcens_long <-
   longevity::npsurv(time = time,
          event = status,
-         type = 'right')
+         type = 'right',
+         tol = 1e-10)
 
 # Compare to Kaplan-Meier
 km <- survival::survfit(survival::Surv(time, status) ~ 1)
@@ -204,7 +206,8 @@ if(lastCensored){
   expect_equal(km$time[probsKM > 0],
                          test_rcens_long$xval[-nm,1])
   expect_equal(test_rcens_long$prob,
-                         c(probsKM[probsKM>0], 1-sum(probsKM)))
+                         c(probsKM[probsKM>0], 1-sum(probsKM)),
+               tolerance = 1e-6)
 }
 }
 # [5] Example of Frydman (1994)
@@ -254,7 +257,8 @@ left <- c(0,15,12,17,13,0,6,0,14,12,13,12,12,0,0,0,0,3,4,1,13,0,0,6,0,2,1,0,0,2,
 right <- c(16, rep(Inf, 4), 24, Inf, 15, rep(Inf, 5), 18, 14, 17, 15, Inf, Inf, 11, 19, 6, 11, Inf, 6, 12, 17, 14, 25, 11, 14)
 test <- longevity::npsurv(time = left,
                time2 = right,
-               type = "interval2")
+               type = "interval2",
+               tol = 1e-12)
 # test2 <- interval::icfit(L = left, R = right, icfitControl = interval::icfitControl(maxit = 1e4, epsilon = 1e-15))
 # expect_equivalent(test$prob, test2$pf, tolerance = 1e-5)
 

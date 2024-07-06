@@ -52,3 +52,35 @@
     .Call(`_longevity_turnbullem`, tsets, lcens, rcens, ltrunc, rtrunc, weights, cens, trunc, tol, zerotol, maxiter)
 }
 
+#' Identification sets for double truncated data
+#'
+#' @param tsets Turnbull's sets
+#' @param lcens numeric vector of left censoring
+#' @param rcens numeric vector of right censoring
+#' @param ltrunc numeric matrix of left truncation
+#' @param rtrunc numeric matrix of right truncation
+#' @param trunc logical are observation truncated?
+#' @export
+#' @return a matrix with the bounds of the intervals for Turnbull sets
+#' @keywords internal
+.censTruncLimitsDtrunc <- function(tsets, lcens, rcens, ltrunc, rtrunc, trunc, cens) {
+    .Call(`_longevity_censTruncLimitsDtrunc`, tsets, lcens, rcens, ltrunc, rtrunc, trunc, cens)
+}
+
+#' Turnbull EM algorithm (low storage implementation)
+#'
+#' @param tsets Turnbull's sets
+#' @param lcens numeric vector of left censoring
+#' @param rcens numeric vector of right censoring
+#' @param ltrunc numeric vector of left truncation
+#' @param rtrunc numeric vector of right truncation
+#' @param cens logical; if \code{FALSE}, then \code{censUpp = censLow} and a particular update can be avoided in the EM algorithm
+#' @param tol tolerance level for terminating the EM algorithm
+#' @param maxiter maximum number of iteration for the EM algorithm
+#' @param weights vector of weights for observations
+#' @return a list with the probabilities and the standard errors
+#' @keywords internal
+.turnbull_em_dtrunc <- function(tsets, lcens, rcens, ltrunc, rtrunc, weights, cens = TRUE, trunc = TRUE, tol = 1e-12, zerotol = 1e-10, maxiter = 1e5L) {
+    .Call(`_longevity_turnbull_em_dtrunc`, tsets, lcens, rcens, ltrunc, rtrunc, weights, cens, trunc, tol, zerotol, maxiter)
+}
+

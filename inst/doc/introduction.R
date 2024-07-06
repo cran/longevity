@@ -27,11 +27,11 @@ plot(tstab_c,
 
 ## -----------------------------------------------------------------------------
 (m1 <- fit_elife(arguments = args, 
-          thresh = 105 * 365.25,
+          thresh = 108 * 365.25,
           family = "gp",
           export = TRUE))
 m0 <- fit_elife(arguments = args, 
-          thresh = 105 * 365.25,
+          thresh = 108 * 365.25,
           family = "exp")
 anova(m1, m0)
 plot(m1, which.plot = "qq")
