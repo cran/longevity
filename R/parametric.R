@@ -496,7 +496,10 @@ fit_elife <- function(time,
         vcov <- NULL
         se_mle <- NA
       } else{
-      se_mle <- sqrt(diag(vcov))
+      se_mle <- try(sqrt(diag(vcov)), silent = TRUE)
+      if(is.character(se_mle)){
+        se_mle <- rep(NA, length(mle))
+      }
       }
       ll <- -opt_mle$value
       conv <- opt_mle$convergence == 0
@@ -609,7 +612,10 @@ fit_elife <- function(time,
       vcov <- NULL
       se_mle <- rep(NA, length(mle))
     } else{
-      se_mle <- try(sqrt(diag(vcov)))
+      se_mle <- try(sqrt(diag(vcov)), silent = TRUE)
+    if(is.character(se_mle)){
+      se_mle <- rep(NA, length(mle))
+    }
     }
     if(is.character(se_mle)){
       se_mle <- rep(NA, length(mle))

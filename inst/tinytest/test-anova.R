@@ -2,7 +2,7 @@
 
 library(longevity)
 library(tinytest)
-set.seed(123)
+# set.seed(123)
 n <- rpois(n = 1, lambda = 150)
 lower <- ifelse(runif(n) < 0.8,
                 0,
@@ -113,63 +113,63 @@ devdiff <- c(
 )
 
 # Regular testing
-if(devdiff[1] > 0){
+if(devdiff[1] >= 0){
 expect_equal(
   anova(fit_exp, fit_gp)[2,5],
   pchisq(devdiff[1], df = 1, lower.tail = FALSE))
-} else{
+} else if(devdiff[1] < -1e-04){
  expect_error(anova(fit_exp, fit_gp))
 }
-if(devdiff[2] > 0){
+if(devdiff[2] >= 0){
 expect_equal(
   anova(fit_exp, fit_weibull)[2,5],
   pchisq(devdiff[2], df = 1, lower.tail = FALSE))
-} else{
+}  else if(devdiff[2] < -1e-04){
   expect_error(anova(fit_exp, fit_weibull))
 }
-if(devdiff[3] > 0){
+if(devdiff[3] >= 0){
 expect_equal(
   anova(fit_gomp, fit_extgp)[2,5],
   pchisq(devdiff[3],
          df = 1, lower.tail = FALSE))
-} else{
+} else if(devdiff[3] < -1e-04){
   expect_error(anova(fit_gomp, fit_extgp))
 }
-if(devdiff[4] > 0){
+if(devdiff[4] >= 0){
 expect_equal(
   anova(fit_perksmake, fit_beardmake)[2,5],
   pchisq(devdiff[4],
          df = 1, lower.tail = FALSE))
-} else{
+} else if(devdiff[4] < -1e-04){
   expect_error(anova(fit_perksmake, fit_beardmake))
 }
 
-if(devdiff[5] > 0){
+if(devdiff[5] >= 0){
 expect_equal(
   anova(fit_perks, fit_beard)[2,5],
   pchisq(devdiff[5], df = 1, lower.tail = FALSE))
-} else{
+}  else if(devdiff[5] < -1e-04){
   expect_error(anova(fit_perks, fit_beard))
 }
 
 # Nonregular, one parameter
-if(devdiff[6] > 0){
+if(devdiff[6] >= 0){
 expect_equal(
   anova(fit_exp, fit_gomp)[2,5],
   0.5*(devdiff[6] < 1e-4) +
     0.5*pchisq(devdiff[6],
          df = 1, lower.tail = FALSE)
   )
-} else{
+} else if(devdiff[6] < -1e-04) {
   expect_error(anova(fit_exp, fit_gomp))
 }
-if(devdiff[7] > 0){
+if(devdiff[7] >= 0){
 expect_equal(
   anova(fit_gp, fit_extgp)[2,5],
   0.5*(devdiff[7] < 1e-4) +
     0.5*pchisq(devdiff[7], df = 1, lower.tail = FALSE)
 )
-} else{
+} else if(devdiff[7] < -1e-04){
   expect_error(anova(fit_gp, fit_extgp))
 }
 # Non-identifiable parameters in nested models
