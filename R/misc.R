@@ -1,4 +1,3 @@
-
 .rlang_s3_register_compat <- function(fn, try_rlang = TRUE) {
   # Compats that behave the same independently of rlang's presence
   out <- switch(
@@ -7,9 +6,11 @@
   )
 
   # Only use rlang if it is fully loaded (#1482)
-  if (try_rlang &&
+  if (
+    try_rlang &&
       requireNamespace("rlang", quietly = TRUE) &&
-      environmentIsLocked(asNamespace("rlang"))) {
+      environmentIsLocked(asNamespace("rlang"))
+  ) {
     switch(
       fn,
       is_interactive = return(rlang::is_interactive)
@@ -51,7 +52,7 @@
 
 
 # Internal from the 'vctrs' package
-.s3_register <- function (generic, class, method = NULL){
+.s3_register <- function(generic, class, method = NULL) {
   stopifnot(is.character(generic), length(generic) == 1)
   stopifnot(is.character(class), length(class) == 1)
   pieces <- strsplit(generic, "::")[[1]]
@@ -63,16 +64,14 @@
     top <- topenv(caller)
     if (isNamespace(top)) {
       asNamespace(environmentName(top))
-    }
-    else {
+    } else {
       caller
     }
   }
   get_method <- function(method) {
     if (is.null(method)) {
       get(paste0(generic, ".", class), envir = get_method_env())
-    }
-    else {
+    } else {
       method
     }
   }
@@ -82,13 +81,17 @@
     stopifnot(is.function(method_fn))
     if (exists(generic, envir)) {
       registerS3method(generic, class, method_fn, envir = envir)
-    }
-    else if (identical(Sys.getenv("NOT_CRAN"), "true")) {
+    } else if (identical(Sys.getenv("NOT_CRAN"), "true")) {
       warn <- .rlang_s3_register_compat("warn")
-      warn(c(sprintf("Can't find generic `%s` in package %s to register S3 method.",
-                     generic, package), i = "This message is only shown to developers using devtools.",
-             i = sprintf("Do you need to update %s to the latest version?",
-                         package)))
+      warn(c(
+        sprintf(
+          "Can't find generic `%s` in package %s to register S3 method.",
+          generic,
+          package
+        ),
+        i = "This message is only shown to developers using devtools.",
+        i = sprintf("Do you need to update %s to the latest version?", package)
+      ))
     }
   }
   setHook(packageEvent(package, "onLoad"), function(...) {
@@ -105,20 +108,21 @@
 
 .onLoad <- function(...) {
   if (requireNamespace("ggplot2", quietly = TRUE)) {
-     .s3_register("ggplot2::autoplot", "elife_par")
-     # .s3_register("ggplot2::autoplot", "elife_hazard")
-     .s3_register("ggplot2::autoplot", "elife_northropcoleman")
-     .s3_register("ggplot2::autoplot", "elife_tstab")
-     .s3_register("ggplot2::autoplot", "elife_profile")
-     # .s3_register("ggplot2::autoplot", "elife_ecdf")
-     # .s3_register("ggplot2::autoplot", "elife_npar")
+    .s3_register("ggplot2::autoplot", "elife_par")
+    # .s3_register("ggplot2::autoplot", "elife_hazard")
+    .s3_register("ggplot2::autoplot", "elife_northropcoleman")
+    .s3_register("ggplot2::autoplot", "elife_tstab")
+    .s3_register("ggplot2::autoplot", "elife_tstab_endpoint")
+    .s3_register("ggplot2::autoplot", "elife_profile")
+    # .s3_register("ggplot2::autoplot", "elife_ecdf")
+    # .s3_register("ggplot2::autoplot", "elife_npar")
   }
 }
 
 #' @rdname plot.elife_par
 #' @export
 #' @param object an object of class \code{elife_par} containing the fitted parametric model
-autoplot.elife_par <- function(object, ...){
+autoplot.elife_par <- function(object, ...) {
   args <- list(...)
   args$plot.type <- "ggplot"
   args$x <- object
@@ -134,11 +138,10 @@ autoplot.elife_par <- function(object, ...){
 #   do.call(plot.elife_hazard, args = args)
 # }
 
-
 #' @export
 #' @rdname plot.elife_northropcoleman
 #' @param object object of class \code{elife_northropcoleman}, with the fitted piecewise-constant generalized Pareto model
-autoplot.elife_northropcoleman <- function(object, ...){
+autoplot.elife_northropcoleman <- function(object, ...) {
   args <- list(...)
   args$plot.type <- "ggplot"
   args$x <- object
@@ -148,7 +151,7 @@ autoplot.elife_northropcoleman <- function(object, ...){
 #' @export
 #' @rdname plot.elife_tstab
 #' @param object object of class \code{elife_tstab}, representing parameter estimates to draw threshold stability plots
-autoplot.elife_tstab <- function(object, ...){
+autoplot.elife_tstab <- function(object, ...) {
   args <- list(...)
   args$plot.type <- "ggplot"
   args$x <- object
@@ -158,12 +161,22 @@ autoplot.elife_tstab <- function(object, ...){
 #' @export
 #' @rdname plot.elife_profile
 #' @param object object of class \code{elife_profile}
-autoplot.elife_profile <- function(object, ...){
+autoplot.elife_profile <- function(object, ...) {
   args <- list(...)
   args$x <- object
+  args$plot.type <- "ggplot"
   do.call(plot.elife_profile, args = args)
 }
 
+#' @export
+#' @rdname plot.elife_profile
+#' @param object object of class \code{elife_tstab_endpoint}
+autoplot.elife_tstab_endpoint <- function(object, ...) {
+  args <- list(...)
+  args$x <- object
+  args$plot.type <- "ggplot"
+  do.call(plot.elife_tstab_endpoint, args = args)
+}
 
 
 #' Check default arguments
@@ -180,10 +193,8 @@ autoplot.elife_profile <- function(object, ...){
 #' @keywords internal
 #' @export
 #' @return a named list with all arguments
-check_arguments <- function(func,
-                            call,
-                            arguments = NULL){
-  if(!is.null(arguments)){
+check_arguments <- function(func, call, arguments = NULL) {
+  if (!is.null(arguments)) {
     stopifnot("\"arguments\" should be a named list" = is.list(arguments))
   }
   arguments.default <- formals(func)
@@ -192,13 +203,15 @@ check_arguments <- function(func,
   new.arguments[names(arguments)] <- arguments
   # Function from https://stackoverflow.com/a/51389399
   to_list <- function(x) {
-    xex <- parse(text = x )[[1]]
+    xex <- parse(text = x)[[1]]
     xex[[1]] <- quote(list)
     eval.parent(xex)
   }
   supplied.arguments <- to_list(deparse(call[names(call) != "arguments"]))
   new.arguments[names(supplied.arguments)] <- supplied.arguments
-  stopifnot("Mandatory \"time\" vector not supplied." = !is.null(new.arguments$time))
+  stopifnot(
+    "Mandatory \"time\" vector not supplied." = !is.null(new.arguments$time)
+  )
   new.arguments$arguments <- NULL
   return(new.arguments)
 }

@@ -126,6 +126,7 @@ np_elife <- function(time,
     arguments <- check_arguments(func = np_elife, call = call, arguments = arguments)
     return(do.call(np_elife, args = arguments))
   }
+  type <- match.arg(type)
   method <- match.arg(method)
   stopifnot(
     "Argument `thresh` should be positive." = min(thresh) >= 0,
@@ -254,7 +255,7 @@ np_elife <- function(time,
         arguments = NULL,
         maxiter = as.integer(maxiter))
       )
-  } else if(method == "emR"){
+  # } else if(method == "emR"){
   # unex <- turnbull_intervals(
   #   time = time,
   #   time2 = time2,
@@ -600,6 +601,15 @@ np_nll <- function(par,
    time <- as.numeric(time)
    n <- length(time)
    type <- match.arg(type)
+   if(is.null(event)){
+     event <- 1L
+   }
+   #stopifnot("Event vector is missing" = !is.null(event))
+   event <- as.integer(event)
+   if(length(event) == 1L){
+     event <- rep(event, n)
+   }
+   stopifnot("Event should be a vector of integers between 0 and 3" = isTRUE(all(event %in% 0:3)))
    if(!is.null(time2) && type %in% c("interval","interval2")){
      time2 <- as.numeric(time2)
      stopifnot("Both `time` and `time2` should be numeric vectors of the same length." = length(time2) == length(time))
@@ -620,12 +630,6 @@ np_nll <- function(par,
      time <- ifelse(as.logical(event), time, NA)
      status <- ifelse(as.logical(event), 1L, 2L)
    } else if(type == "interval"){
-     stopifnot("Event vector is missing" = !is.null(event))
-     event <- as.integer(event)
-     if(length(event) == 1L){
-       event <- rep(event, n)
-     }
-     stopifnot("Event should be a vector of integers between 0 and 3" = isTRUE(all(event %in% 0:3)))
      time2 <- ifelse(event == 0L, NA,
                      ifelse(event %in% c(1L,2L), time, time2))
      time <- ifelse(event == 2L, NA, time)
@@ -678,7 +682,7 @@ np_nll <- function(par,
 #' }
 #' @export
 #' @examples
-#' #' # Toy example with interval censoring and right censoring
+#' # Toy example with interval censoring and right censoring
 #' # Two observations: A1: [1,3], A2: 4
 #' # Probability of 0.5
 #'

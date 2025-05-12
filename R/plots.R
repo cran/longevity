@@ -60,34 +60,46 @@
 #'  family = "gp",
 #'  export = TRUE)
 #' plot(fitted,  which.plot = c("tmd", "dens"))
-plot.elife_par <- function(x,
-                           plot.type = c("base","ggplot"),
-                           which.plot = c("pp","qq"),
-                           confint = c("none", "pointwise", "simultaneous"),
-                           plot = TRUE, ...){
+plot.elife_par <- function(
+  x,
+  plot.type = c("base", "ggplot"),
+  which.plot = c("pp", "qq"),
+  confint = c("none", "pointwise", "simultaneous"),
+  plot = TRUE,
+  ...
+) {
   args <- list(...)
   plot.type <- match.arg(plot.type)
   confint <- match.arg(confint)
-  if(plot.type == "ggplot"){
-    if(requireNamespace("ggplot2", quietly = TRUE)){
-    } else{
+  if (plot.type == "ggplot") {
+    if (requireNamespace("ggplot2", quietly = TRUE)) {
+    } else {
       warning("`ggplot2` package is not installed. Switching to base R plots.")
       plot.type <- "base"
     }
   }
   object <- x
-  stopifnot("Object should be of class `elife_par`" = inherits(object, what = "elife_par"))
-  if(is.null(object$time)){
-    stop("Object created using a call to `fit_elife` should include the data (`export=TRUE`).")
+  stopifnot(
+    "Object should be of class `elife_par`" = inherits(
+      object,
+      what = "elife_par"
+    )
+  )
+  if (is.null(object$time)) {
+    stop(
+      "Object created using a call to `fit_elife` should include the data (`export=TRUE`)."
+    )
   }
-  which.plot <- match.arg(which.plot,
-                          choices = c("pp","qq","sqq","erp","exp","tmd","dens","cdf"),
-                          several.ok = TRUE)
+  which.plot <- match.arg(
+    which.plot,
+    choices = c("pp", "qq", "sqq", "erp", "exp", "tmd", "dens", "cdf"),
+    several.ok = TRUE
+  )
   stopifnot(length(which.plot) >= 1L)
   # Fit a nonparametric survival function (Turnbull, 1976)
-  if(is.null(object$rtrunc) & is.null(object$ltrunc)){
+  if (is.null(object$rtrunc) & is.null(object$ltrunc)) {
     trunc <- FALSE
-  } else{
+  } else {
     trunc <- TRUE
   }
   # if("dens" %in% which.plot & trunc){
@@ -97,207 +109,274 @@ plot.elife_par <- function(x,
   #     return(NULL)
   # }
   # Scaled quantile-quantile plot only valid for truncated data
-  if("sqq" %in% which.plot & !trunc){
+  if ("sqq" %in% which.plot & !trunc) {
     warning("Scaled quantile-quantile plot only useful for truncated data.")
     which.plot[which.plot == "sqq"] <- "qq"
     which.plot <- unique(which.plot)
   }
-  if(is.null(object$rtrunc)){
+  if (is.null(object$rtrunc)) {
     object$rtrunc <- rep(Inf, length(object$time))
   }
-  if(is.null(object$ltrunc)){
+  if (is.null(object$ltrunc)) {
     object$ltrunc <- rep(0, length(object$time))
   }
-  if(is.null(object$status)){
+  if (is.null(object$status)) {
     # Omitted status for doubly truncated data
-      object$status <- rep(1, length.out = length(object$time))
+    object$status <- rep(1, length.out = length(object$time))
   }
-  np <- suppressWarnings(np_elife(arguments = object,
-                 method = "em",
-                 thresh = 0,
-                 tol = 1e-8))
+  np <- suppressWarnings(np_elife(
+    arguments = object,
+    method = "em",
+    thresh = 0,
+    tol = 1e-8
+  ))
   # if(!np$convergence){
   #   warning("Nonparametric maximum likelihood routine did not converge.")
   # }
   #
   # Create a weighted empirical CDF
   ecdffun <- np$cdf
-  seen <- which(object$status %in% c(1,3))
-  if(length(seen) == 0L){
+  seen <- which(object$status %in% c(1, 3))
+  if (length(seen) == 0L) {
     stop("All observations are censored.")
   }
   dat <- object$time[seen]
   # only keep interval censored or observed failure times
   cens <- length(dat) != length(object$time)
-  if(trunc){
-    if(length(object$ltrunc) == 1L){
+  if (trunc) {
+    if (length(object$ltrunc) == 1L) {
       ltrunc <- rep(object$ltrunc, length.out = length(seen))
-    } else if(is.vector(object$ltrunc)){
-      stopifnot("Lower truncation limit should be a vector of length 1 or n."  = length(object$ltrunc) == length(object$time))
-    ltrunc <- object$ltrunc[seen]
-    } else if(is.matrix(object$ltrunc)){
-      ltrunc <- object$ltrunc[seen,]
+    } else if (is.vector(object$ltrunc)) {
+      stopifnot(
+        "Lower truncation limit should be a vector of length 1 or n." = length(
+          object$ltrunc
+        ) ==
+          length(object$time)
+      )
+      ltrunc <- object$ltrunc[seen]
+    } else if (is.matrix(object$ltrunc)) {
+      ltrunc <- object$ltrunc[seen, ]
     }
-  } else{
+  } else {
     ltrunc <- NULL
   }
-  if(trunc){
-    if(length(object$rtrunc) == 1L){
+  if (trunc) {
+    if (length(object$rtrunc) == 1L) {
       rtrunc <- rep(object$rtrunc, length.out = sum(object$status == 1L))
-    } else if(is.vector(object$rtrunc)){
-      stopifnot("Upper truncation limit should be a vector of length 1 or n."  = length(object$rtrunc) == length(object$time))
+    } else if (is.vector(object$rtrunc)) {
+      stopifnot(
+        "Upper truncation limit should be a vector of length 1 or n." = length(
+          object$rtrunc
+        ) ==
+          length(object$time)
+      )
       rtrunc <- object$rtrunc[seen]
-    } else if(is.matrix(object$rtrunc)){
-      rtrunc <- object$rtrunc[seen,]
+    } else if (is.matrix(object$rtrunc)) {
+      rtrunc <- object$rtrunc[seen, ]
     }
-  } else{
+  } else {
     rtrunc <- NULL
   }
-  xpos <- length(dat) * ecdffun(dat)/(length(dat) + 1L)
-  if(trunc){
-    if(is.matrix(ltrunc)){
-      Fe_a2 <- ifelse(is.na(ltrunc[,2]), 0, ecdffun(ltrunc[,2]))
-      Fe_b2 <- ifelse(is.na(rtrunc[,2]), 0, ecdffun(rtrunc[,2]))
-      Fe_a1 <- ifelse(rtrunc[,1] == 0, 0, ecdffun(ltrunc[,1]))
-      Fe_b1 <- ifelse(rtrunc[,1] == 0, 0, ecdffun(rtrunc[,1]))
-      num <- ifelse(dat > rtrunc[,1],
-                    xpos - Fe_a2 + Fe_b1 - Fe_a1,
-                    xpos - Fe_a1)
-      xpos <- pmax(0, num) /  (Fe_b2 - Fe_a2 + Fe_b1 - Fe_a1)
-    } else{
-      xpos <- pmax(0,  xpos - ecdffun(ltrunc))/ (ecdffun(rtrunc) - ecdffun(ltrunc))
+  xpos <- length(dat) * ecdffun(dat) / (length(dat) + 1L)
+  if (trunc) {
+    if (is.matrix(ltrunc)) {
+      Fe_a2 <- ifelse(is.na(ltrunc[, 2]), 0, ecdffun(ltrunc[, 2]))
+      Fe_b2 <- ifelse(is.na(rtrunc[, 2]), 0, ecdffun(rtrunc[, 2]))
+      Fe_a1 <- ifelse(rtrunc[, 1] == 0, 0, ecdffun(ltrunc[, 1]))
+      Fe_b1 <- ifelse(rtrunc[, 1] == 0, 0, ecdffun(rtrunc[, 1]))
+      num <- ifelse(
+        dat > rtrunc[, 1],
+        xpos - Fe_a2 + Fe_b1 - Fe_a1,
+        xpos - Fe_a1
+      )
+      xpos <- pmax(0, num) / (Fe_b2 - Fe_a2 + Fe_b1 - Fe_a1)
+    } else {
+      xpos <- pmax(0, xpos - ecdffun(ltrunc)) /
+        (ecdffun(rtrunc) - ecdffun(ltrunc))
     }
   }
   parameters <- .npar_elife(par = object$par, family = object$family)
   parameters$family <- object$family
-  if(parameters$family == "gppiece"){
+  if (parameters$family == "gppiece") {
     parameters$thresh <- object$thresh
   }
-  pmod <- function(x, args){
-    if(args$family == "gppiece"){
-      pgppiece(q = x, scale = args$scale, shape = args$shape, thresh = args$thresh)
-    } else{
+  pmod <- function(x, args) {
+    if (args$family == "gppiece") {
+      pgppiece(
+        q = x,
+        scale = args$scale,
+        shape = args$shape,
+        thresh = args$thresh
+      )
+    } else {
       args$q <- x
       do.call(pelife, args)
     }
   }
-  qmod <- function(x, args){
-    if(args$family == "gppiece"){
-      qgppiece(p = x, scale = args$scale, shape = args$shape, thresh = args$thresh)
-    } else{
+  qmod <- function(x, args) {
+    if (args$family == "gppiece") {
+      qgppiece(
+        p = x,
+        scale = args$scale,
+        shape = args$shape,
+        thresh = args$thresh
+      )
+    } else {
       args$p <- x
       do.call(qelife, args)
     }
   }
-  dmod <- function(x, args){
-    if(args$family == "gppiece"){
-      dgppiece(x = x, scale = args$scale, shape = args$shape, thresh = args$thresh)
-    } else{
+  dmod <- function(x, args) {
+    if (args$family == "gppiece") {
+      dgppiece(
+        x = x,
+        scale = args$scale,
+        shape = args$shape,
+        thresh = args$thresh
+      )
+    } else {
       args$x <- x
       do.call(delife, args)
     }
   }
   # This position is used for PP plots, and whichever plot which maps back to common scale
   ypos <- pmod(dat, args = parameters)
-  if(trunc){
-    if(!is.matrix(ltrunc)){
-      ypos <- (ypos - pmod(ltrunc, args = parameters))/
-      (pmod(rtrunc, args = parameters) - pmod(ltrunc, args = parameters))
-    } else{
-      F_a2 <- ifelse(is.na(ltrunc[,2]), 0, pmod(ltrunc[,2], args = parameters))
-      F_b2 <- ifelse(is.na(rtrunc[,2]), 0, pmod(rtrunc[,2], args = parameters))
-      F_a1 <- ifelse(rtrunc[,1] == 0, 0, pmod(ltrunc[,1], args = parameters))
-      F_b1 <- ifelse(rtrunc[,1] == 0, 0, pmod(rtrunc[,1], args = parameters))
-      num <- ifelse(dat > rtrunc[,1],
-                    ypos - F_a2 + F_b1 - F_a1,
-                    ypos - F_a1)
-      ypos <- pmax(0, num) /  (F_b2 - F_a2 + F_b1 - F_a1)
+  if (trunc) {
+    if (!is.matrix(ltrunc)) {
+      ypos <- (ypos - pmod(ltrunc, args = parameters)) /
+        (pmod(rtrunc, args = parameters) - pmod(ltrunc, args = parameters))
+    } else {
+      F_a2 <- ifelse(
+        is.na(ltrunc[, 2]),
+        0,
+        pmod(ltrunc[, 2], args = parameters)
+      )
+      F_b2 <- ifelse(
+        is.na(rtrunc[, 2]),
+        0,
+        pmod(rtrunc[, 2], args = parameters)
+      )
+      F_a1 <- ifelse(rtrunc[, 1] == 0, 0, pmod(ltrunc[, 1], args = parameters))
+      F_b1 <- ifelse(rtrunc[, 1] == 0, 0, pmod(rtrunc[, 1], args = parameters))
+      num <- ifelse(dat > rtrunc[, 1], ypos - F_a2 + F_b1 - F_a1, ypos - F_a1)
+      ypos <- pmax(0, num) / (F_b2 - F_a2 + F_b1 - F_a1)
     }
   }
-  if(any(c("qq","tmd","erp") %in% which.plot)){
+  if (any(c("qq", "tmd", "erp") %in% which.plot)) {
     txpos <- xpos
-    if(trunc){
-      if(!is.matrix(ltrunc)){
-      txpos <- xpos*pmod(rtrunc, args = parameters) +
-        (1-xpos)*pmod(ltrunc, args = parameters) # Fa + u*(Fb-Fa)
-      } else{ # matrix
-      txpos <- pmin(1-1e-10, pmax(1e-10, xpos*(F_b2 - F_a2 + F_b1 - F_a1) +
-        ifelse(dat > rtrunc[,1],
-               (F_a2 - F_b1 + F_a1),
-               F_a1)))
-    }
+    if (trunc) {
+      if (!is.matrix(ltrunc)) {
+        txpos <- xpos *
+          pmod(rtrunc, args = parameters) +
+          (1 - xpos) * pmod(ltrunc, args = parameters) # Fa + u*(Fb-Fa)
+      } else {
+        # matrix
+        txpos <- pmin(
+          1 - 1e-10,
+          pmax(
+            1e-10,
+            xpos *
+              (F_b2 - F_a2 + F_b1 - F_a1) +
+              ifelse(dat > rtrunc[, 1], (F_a2 - F_b1 + F_a1), F_a1)
+          )
+        )
+      }
     }
   }
-  if("erp" %in% which.plot){
-    if(isTRUE(all(object$status == 1L))){
-      warning("`erp` is only useful for censored data. Use `which.plot = pp` for specifying the equivalent plot.")
-      if("pp" %in% which.plot){
+  if ("erp" %in% which.plot) {
+    if (isTRUE(all(object$status == 1L))) {
+      warning(
+        "`erp` is only useful for censored data. Use `which.plot = pp` for specifying the equivalent plot."
+      )
+      if ("pp" %in% which.plot) {
         which.plot <- which.plot[which.plot == "erp"]
       } else {
         which.plot[which.plot == "erp"] <- "pp"
       }
-    } else{
-      np2 <- np_elife(time = dat,
-                      ltrunc = ltrunc,
-                      rtrunc = rtrunc)
+    } else {
+      np2 <- np_elife(time = dat, ltrunc = ltrunc, rtrunc = rtrunc)
       # Create a weighted empirical CDF
       ecdffun2 <- np2$cdf
     }
   }
-  if(plot.type == "base"){
-    for(pl in which.plot){
-      if(pl == "pp"){
-        plot(y = ypos,
-             x = xpos,
-             bty = "l",
-             pch = 20,
-             xlab = "theoretical quantiles",
-             ylab = "empirical quantiles",
-             panel.first = {abline(a = 0, b = 1, col = "gray")})
-      } else if(pl == "exp"){
+  if (plot.type == "base") {
+    for (pl in which.plot) {
+      if (pl == "pp") {
+        plot(
+          y = ypos,
+          x = xpos,
+          bty = "l",
+          pch = 20,
+          xlab = "theoretical quantiles",
+          ylab = "empirical quantiles",
+          panel.first = {
+            abline(a = 0, b = 1, col = "gray")
+          }
+        )
+      } else if (pl == "exp") {
         # exponential q-q plot
-        plot(y = -log(1-ypos),
-             x = -log(1-xpos),
-             bty = "l",
-             pch = 20,
-             xlab = "theoretical quantiles",
-             ylab = "empirical quantiles",
-             panel.first = {abline(a = 0, b = 1, col = "gray")})
-      } else if(pl == "qq"){
-        plot(y = dat,
-             x = qmod(txpos, args = parameters),
-             bty = "l",
-             pch = 20,
-             xlab = "theoretical quantiles",
-             ylab = "empirical quantiles",
-             panel.first = {abline(a = 0, b = 1, col = "gray")})
-      } else if(pl == "tmd"){
+        plot(
+          y = -log(1 - ypos),
+          x = -log(1 - xpos),
+          bty = "l",
+          pch = 20,
+          xlab = "theoretical quantiles",
+          ylab = "empirical quantiles",
+          panel.first = {
+            abline(a = 0, b = 1, col = "gray")
+          }
+        )
+      } else if (pl == "qq") {
+        plot(
+          y = dat,
+          x = qmod(txpos, args = parameters),
+          bty = "l",
+          pch = 20,
+          xlab = "theoretical quantiles",
+          ylab = "empirical quantiles",
+          panel.first = {
+            abline(a = 0, b = 1, col = "gray")
+          }
+        )
+      } else if (pl == "tmd") {
         yp <- dat
         xp <- qmod(txpos, args = parameters)
-        plot(y = yp - xp,
-             x = (xp + yp) / 2,
-             bty = "l",
-             pch = 20,
-             xlab = "average quantile",
-             ylab = "quantile difference",
-             panel.first = {abline(h = 0, col = "gray")})
-      } else if(pl == "erp" && cens){
-        plot(y = ecdffun2(dat),
-             x = ecdffun2(qmod(txpos, args = parameters)),
-             bty = "l",
-             pch = 20,
-             xlab = "theoretical quantiles",
-             ylab = "empirical quantiles",
-             panel.first = {abline(a = 0, b = 1, col = "gray")})
-      }  else if(pl == "sqq" && trunc){
-        plot(y = qmod(sort(ypos), args = parameters),
-             x = qmod(ppoints(length(ypos)), args = parameters),
-             bty = "l",
-             pch = 20,
-             xlab = "theoretical quantiles",
-             ylab = "empirical quantiles",
-             panel.first = {abline(a = 0, b = 1, col = "gray")})
-      } else if(pl == "dens"){
+        plot(
+          y = yp - xp,
+          x = (xp + yp) / 2,
+          bty = "l",
+          pch = 20,
+          xlab = "average quantile",
+          ylab = "quantile difference",
+          panel.first = {
+            abline(h = 0, col = "gray")
+          }
+        )
+      } else if (pl == "erp" && cens) {
+        plot(
+          y = ecdffun2(dat),
+          x = ecdffun2(qmod(txpos, args = parameters)),
+          bty = "l",
+          pch = 20,
+          xlab = "theoretical quantiles",
+          ylab = "empirical quantiles",
+          panel.first = {
+            abline(a = 0, b = 1, col = "gray")
+          }
+        )
+      } else if (pl == "sqq" && trunc) {
+        plot(
+          y = qmod(sort(ypos), args = parameters),
+          x = qmod(ppoints(length(ypos)), args = parameters),
+          bty = "l",
+          pch = 20,
+          xlab = "theoretical quantiles",
+          ylab = "empirical quantiles",
+          panel.first = {
+            abline(a = 0, b = 1, col = "gray")
+          }
+        )
+      } else if (pl == "dens") {
         breaks <- FALSE
         # Use NPMLE to get cutoff points for mass
         xvals <- c(np$xval)
@@ -305,89 +384,101 @@ plot.elife_par <- function(x,
         xvals <- xvals[is.finite(xvals)]
         # Obtain range
         ran <- range(xvals)
-        if(!is.null(args$breaks)){
+        if (!is.null(args$breaks)) {
           breaks <- args$breaks
           # Extract breaks, must be numeric
-          if(is.numeric(breaks) | is.integer(breaks)){
+          if (is.numeric(breaks) | is.integer(breaks)) {
             # Either pass number of classes
-            if(length(breaks) == 1L){
-              if(breaks < 0){
+            if (length(breaks) == 1L) {
+              if (breaks < 0) {
                 stop("Invalid \"breaks\" argument.")
               }
-             nbr <- ceiling(breaks)
-             xs <- seq(from = ran[1], to = ran[2], length.out = nbr)
-             mid <- xs[-length(xs)] + (xs[2]-xs[1])/2
-            } else{
+              nbr <- ceiling(breaks)
+              xs <- seq(from = ran[1], to = ran[2], length.out = nbr)
+              mid <- xs[-length(xs)] + (xs[2] - xs[1]) / 2
+            } else {
               xs <- sort(breaks)
-              mid <- xs[-length(xs)] + diff(xs)/2
+              mid <- xs[-length(xs)] + diff(xs) / 2
             }
             breaks <- TRUE
           }
         }
-        if(isTRUE(!breaks)){ # if 'breaks' = FALSE
-            xs <- seq(from = ran[1], to = ran[2],
-                      length.out = pmin(100, ceiling(sqrt(object$nexc))))
-            mid <- xs[-length(xs)] + (xs[2]-xs[1])/2
+        if (isTRUE(!breaks)) {
+          # if 'breaks' = FALSE
+          xs <- seq(
+            from = ran[1],
+            to = ran[2],
+            length.out = pmin(100, ceiling(sqrt(object$nexc)))
+          )
+          mid <- xs[-length(xs)] + (xs[2] - xs[1]) / 2
         }
         prob <- diff(np$cdf(xs))
-        sprob <- prob/sum(diff(xs)*prob)
+        sprob <- prob / sum(diff(xs) * prob)
         xt <- seq(ran[1], ran[2], length.out = 101)
         dt <- dmod(xt, args = parameters)
-        plot(y = sprob,
-            x = object$thresh + mid,
-               type = "h",
-               ylim = c(0, 1.02 * max(sprob, dt)),
-               lwd = pmax(1, 200/length(xs)),
-               lend = 1,
-               xlab = "",
-               col = "grey",
-               ylab = "density",
-               yaxs = "i",
-               bty = "l")
-          lines(object$thresh + xt, dt)
-        }  else if(pl == "cdf"){
-          maxxt <- max(np$xval[is.finite(np$xval)])
-          xt <- seq(0, maxxt*1.05, length.out = 101)
-          cdf <- pmod(xt, args = parameters)
-          ecdf <- .wecdf(x = object$thresh + np$xval[, 2],
-                        w = np$prob)
-          plot(ecdf,
-               xlim = range(xt), # TODO fix
-               ...
-              )
-          lines(x = xt + object$thresh,
-                y = cdf,
-                type = "l",
-                col = "grey")
-        }
+        plot(
+          y = sprob,
+          x = object$thresh + mid,
+          type = "h",
+          ylim = c(0, 1.02 * max(sprob, dt)),
+          lwd = pmax(1, 200 / length(xs)),
+          lend = 1,
+          xlab = "",
+          col = "grey",
+          ylab = "density",
+          yaxs = "i",
+          bty = "l"
+        )
+        lines(object$thresh + xt, dt)
+      } else if (pl == "cdf") {
+        maxxt <- max(np$xval[is.finite(np$xval)])
+        xt <- seq(0, maxxt * 1.05, length.out = 101)
+        cdf <- pmod(xt, args = parameters)
+        ecdf <- .wecdf(x = object$thresh + np$xval[, 2], w = np$prob)
+        plot(
+          ecdf,
+          xlim = range(xt), # TODO fix
+          ...
+        )
+        lines(x = xt + object$thresh, y = cdf, type = "l", col = "grey")
+      }
     }
     return(invisible(NULL))
-  } else if(plot.type == "ggplot"){
+  } else if (plot.type == "ggplot") {
     pl_list <- list()
-    for(pl in which.plot){
-      if(pl == "pp"){
+    for (pl in which.plot) {
+      if (pl == "pp") {
         pl_list[["pp"]] <-
           ggplot2::ggplot(data = data.frame(y = ypos, x = xpos)) +
           ggplot2::geom_abline(intercept = 0, slope = 1, col = "gray") +
-          ggplot2::geom_point(mapping = ggplot2::aes(
-            x = .data[["x"]],
-            y = .data[["y"]])) +
-          ggplot2::labs(x = "theoretical quantiles",
-               y = "empirical quantiles") +
+          ggplot2::geom_point(
+            mapping = ggplot2::aes(
+              x = .data[["x"]],
+              y = .data[["y"]]
+            )
+          ) +
+          ggplot2::labs(
+            x = "theoretical quantiles",
+            y = "empirical quantiles"
+          ) +
           ggplot2::theme_classic()
-      } else if(pl == "exp"){
+      } else if (pl == "exp") {
         pl_list[["exp"]] <-
-          ggplot2::ggplot(data = data.frame(
-            y = -log(1-ypos),
-            x = -log(1-xpos)),
-                 mapping = ggplot2::aes(x = .data[["x"]],
-                                        y = .data[["y"]])) +
+          ggplot2::ggplot(
+            data = data.frame(
+              y = -log(1 - ypos),
+              x = -log(1 - xpos)
+            ),
+            mapping = ggplot2::aes(x = .data[["x"]], y = .data[["y"]])
+          ) +
           ggplot2::geom_abline(intercept = 0, slope = 1, col = "gray") +
           ggplot2::geom_point() +
-          ggplot2::labs(x = "theoretical quantiles",
-               y = "empirical quantiles") +
+          ggplot2::labs(
+            x = "theoretical quantiles",
+            y = "empirical quantiles"
+          ) +
           ggplot2::theme_classic()
-      } else if(pl == "qq"){
+      } else if (pl == "qq") {
         # if(confint && object$type != "ltrc"){
         #     # TODO fix this
         #  confint_qq <- uq1_qqplot_elife(B = 1999L,
@@ -400,14 +491,16 @@ plot.elife_par <- function(x,
         # }
         # if(!confint){
         pl_list[["qq"]] <-
-          ggplot2::ggplot(data = data.frame(y = dat,
-                                   x = qmod(txpos, args = parameters)),
-                 mapping = ggplot2::aes(x = .data[["x"]],
-                                        y = .data[["y"]])) +
+          ggplot2::ggplot(
+            data = data.frame(y = dat, x = qmod(txpos, args = parameters)),
+            mapping = ggplot2::aes(x = .data[["x"]], y = .data[["y"]])
+          ) +
           ggplot2::geom_abline(intercept = 0, slope = 1, col = "gray") +
           ggplot2::geom_point() +
-          ggplot2::labs(x = "theoretical quantiles",
-               y = "empirical quantiles") +
+          ggplot2::labs(
+            x = "theoretical quantiles",
+            y = "empirical quantiles"
+          ) +
           ggplot2::theme_classic()
         # } else if(confint){
         #   pl_list[["qq"]] <-
@@ -423,51 +516,62 @@ plot.elife_par <- function(x,
         #     geom_line(data = data.frame(x = confint_qq$overall[2,], y = object$dat),  mapping = aes(x=x,y=y), lty = 2) +
         #     geom_point()
         # }
-      } else if(pl == "tmd"){
+      } else if (pl == "tmd") {
         xp <- qmod(txpos, args = parameters)
         yp <- dat
         xmap <- (xp + yp) / 2
         ymap <- yp - xp
         pl_list[["tmd"]] <-
-          ggplot2::ggplot(data = data.frame(x = xmap, y = ymap),
-                 mapping = ggplot2::aes(x = .data[["x"]],
-                                         y = .data[["y"]])) +
+          ggplot2::ggplot(
+            data = data.frame(x = xmap, y = ymap),
+            mapping = ggplot2::aes(x = .data[["x"]], y = .data[["y"]])
+          ) +
           ggplot2::geom_hline(yintercept = 0, col = "gray") +
           ggplot2::geom_point() +
           ggplot2::labs(
-               x = "average quantile",
-               y = "quantile difference") +
+            x = "average quantile",
+            y = "quantile difference"
+          ) +
           ggplot2::theme_classic()
-
-      } else if(pl == "erp"){
+      } else if (pl == "erp") {
         pl_list[["erp"]] <-
           ggplot2::ggplot(
             data = data.frame(
-             y = ecdffun2(dat),
-             x = ecdffun2(qmod(txpos, args = parameters))),
-          mapping = ggplot2::aes(
-            x = .data[["x"]],
-            y = .data[["y"]])) +
+              y = ecdffun2(dat),
+              x = ecdffun2(qmod(txpos, args = parameters))
+            ),
+            mapping = ggplot2::aes(
+              x = .data[["x"]],
+              y = .data[["y"]]
+            )
+          ) +
           ggplot2::geom_abline(intercept = 0, slope = 1, col = "gray") +
           ggplot2::geom_point() +
-          ggplot2::labs(x = "theoretical quantiles",
-               y = "empirical quantiles") +
+          ggplot2::labs(
+            x = "theoretical quantiles",
+            y = "empirical quantiles"
+          ) +
           ggplot2::theme_classic()
-      } else if(pl == "sqq" && trunc){
-      pl_list[["sqq"]] <-
-        ggplot2::ggplot(
-          data = data.frame(
-            y = qmod(ypos, args = parameters),
-            x = qmod(ppoints(length(ypos)))),
-          mapping = ggplot2::aes(
-            x = .data[["x"]],
-            y = .data[["y"]])) +
-        ggplot2::geom_abline(intercept = 0, slope = 1, col = "gray") +
-        ggplot2::geom_point() +
-        ggplot2::labs(x = "theoretical quantiles",
-                      y = "empirical quantiles") +
-        ggplot2::theme_classic()
-      } else if(pl == "dens"){
+      } else if (pl == "sqq" && trunc) {
+        pl_list[["sqq"]] <-
+          ggplot2::ggplot(
+            data = data.frame(
+              y = qmod(ypos, args = parameters),
+              x = qmod(ppoints(length(ypos)))
+            ),
+            mapping = ggplot2::aes(
+              x = .data[["x"]],
+              y = .data[["y"]]
+            )
+          ) +
+          ggplot2::geom_abline(intercept = 0, slope = 1, col = "gray") +
+          ggplot2::geom_point() +
+          ggplot2::labs(
+            x = "theoretical quantiles",
+            y = "empirical quantiles"
+          ) +
+          ggplot2::theme_classic()
+      } else if (pl == "dens") {
         # With continuous data (no censoring, no truncation),
         # one could in principle compute a histogram of the data,
         # rescale it to the density scale and compare with the
@@ -485,33 +589,37 @@ plot.elife_par <- function(x,
         xvals <- xvals[is.finite(xvals)]
         # Obtain range
         ran <- range(xvals)
-        if(!is.null(args$breaks)){
+        if (!is.null(args$breaks)) {
           breaks <- args$breaks
           # Extract breaks, must be numeric
-          if(is.numeric(breaks) | is.integer(breaks)){
+          if (is.numeric(breaks) | is.integer(breaks)) {
             # Either pass number of classes
-            if(length(breaks) == 1L){
-              if(breaks < 0){
-               stop("Invalid \"breaks\" argument.")
+            if (length(breaks) == 1L) {
+              if (breaks < 0) {
+                stop("Invalid \"breaks\" argument.")
               }
               nbr <- ceiling(breaks)
               xs <- seq(from = ran[1], to = ran[2], length.out = nbr)
-              mid <- xs[-length(xs)] + (xs[2]-xs[1])/2
-            } else{
+              mid <- xs[-length(xs)] + (xs[2] - xs[1]) / 2
+            } else {
               xs <- sort(breaks)
-              mid <- xs[-length(xs)] + diff(xs)/2
+              mid <- xs[-length(xs)] + diff(xs) / 2
             }
           } else {
             breaks <- FALSE
           }
         }
-        if(isTRUE(!breaks)){ # if 'breaks' = FALSE
-          xs <- seq(from = ran[1], to = ran[2],
-                    length.out = pmin(100, ceiling(sqrt(object$nexc))))
-          mid <- xs[-length(xs)] + (xs[2]-xs[1])/2
+        if (isTRUE(!breaks)) {
+          # if 'breaks' = FALSE
+          xs <- seq(
+            from = ran[1],
+            to = ran[2],
+            length.out = pmin(100, ceiling(sqrt(object$nexc)))
+          )
+          mid <- xs[-length(xs)] + (xs[2] - xs[1]) / 2
         }
         prob <- diff(np$cdf(xs))
-        sprob <- prob/sum(diff(xs)*prob)
+        sprob <- prob / sum(diff(xs) * prob)
         xt <- seq(ran[1], ran[2], length.out = 101)
         dt <- dmod(xt, args = parameters)
         pl_list[["dens"]] <-
@@ -519,71 +627,82 @@ plot.elife_par <- function(x,
           ggplot2::geom_col(
             data = data.frame(
               y = sprob,
-              x = mid + object$thresh),
+              x = mid + object$thresh
+            ),
             mapping = ggplot2::aes(
               x = .data[["x"]],
-              y = .data[["y"]]),
+              y = .data[["y"]]
+            ),
             color = "grey",
             alpha = 0.5
           ) +
           ggplot2::geom_line(
             data = data.frame(
               y = dt,
-              x = xt + object$thresh),
+              x = xt + object$thresh
+            ),
             mapping = ggplot2::aes(
               x = .data[["x"]],
-              y = .data[["y"]])
-            ) +
-          ggplot2::labs(x = "",
-                        y = "density") +
-          ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.02))) +
+              y = .data[["y"]]
+            )
+          ) +
+          ggplot2::labs(x = "", y = "density") +
+          ggplot2::scale_y_continuous(
+            expand = ggplot2::expansion(mult = c(0, 0.02))
+          ) +
           ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0)) +
           ggplot2::theme_classic()
-      } else if(pl == "cdf"){
+      } else if (pl == "cdf") {
         maxxt <- max(np$xval[is.finite(np$xval)])
-      xt <- seq(0, maxxt*1.05, length.out = 101)
-      xv <- sort(unique(c(np$xval[,1], np$xval[,2] + 1e-5)))
-      cdf <- pmod(xt, args = parameters)
-      pl_list[["cdf"]] <-
-        ggplot2::ggplot() +
-        ggplot2::geom_step(
-          data = data.frame(
-            x = xv + object$thresh,
-            y = np$cdf(xv)
+        xt <- seq(0, maxxt * 1.05, length.out = 101)
+        xv <- sort(unique(c(np$xval[, 1], np$xval[, 2] + 1e-5)))
+        cdf <- pmod(xt, args = parameters)
+        pl_list[["cdf"]] <-
+          ggplot2::ggplot() +
+          ggplot2::geom_step(
+            data = data.frame(
+              x = xv + object$thresh,
+              y = np$cdf(xv)
             ),
-          mapping = ggplot2::aes(
-            x = .data[["x"]],
-            y = .data[["y"]]),
-          color = "grey",
-          alpha = 0.5
-        ) +
-        ggplot2::geom_line(
-          data = data.frame(
-            y = cdf,
-            x = xt + object$thresh),
-          mapping = ggplot2::aes(
-            x = .data[["x"]],
-            y = .data[["y"]])
-        ) +
-        ggplot2::labs(x = "",
-                      y = "distribution function") +
-        ggplot2::scale_y_continuous(limits = c(-1e-8,1+1e-8),
-                                    breaks = seq(0, 1, by = 0.25),
-                                    labels = c("0","0.25","0.5","0.75","1"),
-                                    expand = ggplot2::expansion()) +
-        ggplot2::scale_x_continuous(limits = range(xt) +
-                                      object$thresh + c(-1e-8, 1e-8),
-                                    expand = ggplot2::expansion(mult = c(0, 0.04))) +
-        ggplot2::theme_classic()
+            mapping = ggplot2::aes(
+              x = .data[["x"]],
+              y = .data[["y"]]
+            ),
+            color = "grey",
+            alpha = 0.5
+          ) +
+          ggplot2::geom_line(
+            data = data.frame(
+              y = cdf,
+              x = xt + object$thresh
+            ),
+            mapping = ggplot2::aes(
+              x = .data[["x"]],
+              y = .data[["y"]]
+            )
+          ) +
+          ggplot2::labs(x = "", y = "distribution function") +
+          ggplot2::scale_y_continuous(
+            limits = c(-1e-8, 1 + 1e-8),
+            breaks = seq(0, 1, by = 0.25),
+            labels = c("0", "0.25", "0.5", "0.75", "1"),
+            expand = ggplot2::expansion()
+          ) +
+          ggplot2::scale_x_continuous(
+            limits = range(xt) +
+              object$thresh +
+              c(-1e-8, 1e-8),
+            expand = ggplot2::expansion(mult = c(0, 0.04))
+          ) +
+          ggplot2::theme_classic()
       }
     }
   }
-    if(plot){
-      lapply(pl_list, get("print.ggplot", envir = loadNamespace("ggplot2")))
-    }
-    return(invisible(pl_list))
+  if (plot) {
+    lapply(pl_list, get("print.ggplot", envir = loadNamespace("ggplot2")))
+  }
+  return(invisible(pl_list))
 }
-
 
 
 # #' Uncertainty quantification for quantile-quantile plots
@@ -744,7 +863,7 @@ plot.elife_par <- function(x,
 #' @param x argument of class \code{elife_ecdf}
 #' @return base R plot of the empirical distribution function
 #' @param ... additional arguments for the plot
-plot.elife_ecdf <- function(x, ...){
+plot.elife_ecdf <- function(x, ...) {
   args <- list(...)
   args$main <- ""
   args$x <- x

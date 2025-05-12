@@ -56,7 +56,7 @@ Contrary to the Kaplan-Meier estimator, the mass is placed in the interval
 [\code{max(time), Inf}) so the resulting distribution function is not deficient.
 }
 \examples{
-#' # Toy example with interval censoring and right censoring
+# Toy example with interval censoring and right censoring
 # Two observations: A1: [1,3], A2: 4
 # Probability of 0.5
 

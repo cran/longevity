@@ -3,11 +3,14 @@
 \name{plot.elife_profile}
 \alias{plot.elife_profile}
 \alias{autoplot.elife_profile}
+\alias{autoplot.elife_tstab_endpoint}
 \title{Plot profile of endpoint}
 \usage{
 \method{plot}{elife_profile}(x, plot.type = c("base", "ggplot"), plot = TRUE, ...)
 
 autoplot.elife_profile(object, ...)
+
+autoplot.elife_tstab_endpoint(object, ...)
 }
 \arguments{
 \item{x}{an object of class \code{elife_profile} containing information about the profile likelihood, maximum likelihood and grid of values for the endpoint}
@@ -18,7 +21,7 @@ autoplot.elife_profile(object, ...)
 
 \item{...}{additional arguments to pass to \code{plot}, currently ignored}
 
-\item{object}{object of class \code{elife_profile}}
+\item{object}{object of class \code{elife_tstab_endpoint}}
 }
 \value{
 base R or ggplot object for a plot of the profile log likelihood of the endpoint of the generalized Pareto distribution

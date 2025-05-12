@@ -1,7 +1,7 @@
 Package: longevity
 Type: Package
 Title: Statistical Methods for the Analysis of Excess Lifetimes
-Version: 1.1.1
+Version: 1.2
 Authors@R: c(person(given="Leo", family="Belzile", role = c("aut", "cre"), email = "belzilel@gmail.com", comment = c(ORCID = "0000-0002-9135-014X")))
 BugReports: https://github.com/lbelzile/longevity/issues
 URL: https://lbelzile.github.io/longevity/
@@ -16,8 +16,8 @@ LazyData: true
 RoxygenNote: 7.3.2
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2024-07-18 20:00:37 UTC; lbelzile
-Author: Leo Belzile [aut, cre] (<https://orcid.org/0000-0002-9135-014X>)
+Packaged: 2025-05-12 00:11:04 UTC; lbelzile
+Author: Leo Belzile [aut, cre] (ORCID: <https://orcid.org/0000-0002-9135-014X>)
 Maintainer: Leo Belzile <belzilel@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-07-19 09:00:21 UTC
+Date/Publication: 2025-05-12 02:10:02 UTC
