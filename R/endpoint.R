@@ -163,6 +163,15 @@ endpoint.tstab <- function(
   plot = TRUE,
   ...
 ) {
+  if (!is.null(arguments)) {
+    call <- match.call(expand.dots = FALSE)
+    arguments <- check_arguments(
+      func = endpoint.tstab,
+      call = call,
+      arguments = arguments
+    )
+    return(do.call(endpoint.tstab, args = arguments))
+  }
   if (length(thresh) <= 1) {
     stop("Vector \"thresh\" must contain multiple thresholds.")
   }

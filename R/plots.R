@@ -699,7 +699,17 @@ plot.elife_par <- function(
     }
   }
   if (plot) {
-    lapply(pl_list, get("print.ggplot", envir = loadNamespace("ggplot2")))
+    lapply(
+      X = pl_list,
+      FUN = get(
+        x = ifelse(
+          packageVersion("ggplot2") >= "3.5.2.9001",
+          "print.ggplot2::ggplot",
+          "print.ggplot"
+        ),
+        envir = loadNamespace("ggplot2")
+      )
+    )
   }
   return(invisible(pl_list))
 }

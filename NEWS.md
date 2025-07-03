@@ -1,4 +1,11 @@
 
+# Version 1.2.1
+
+## Changes
+
+- Changes due to update of `ggplot2` to 4.0.0 (S3 classes not exported anymore)
+
+
 # Version 1.2
 
 ## Changes
