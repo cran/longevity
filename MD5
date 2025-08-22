@@ -1,4 +1,4 @@
-fb6c591b370d03636301f7e90871e446 *DESCRIPTION
+ff963ae25f175979f719a981d0909c21 *DESCRIPTION
 6fb4296e469daac8225fb0f8a6445e56 *NAMESPACE
 9fdf3858dc69b105662658ea28df59ee *NEWS.md
 d375a17ed2bc03bf57a799a9c4e80188 *R/RcppExports.R
@@ -12,11 +12,11 @@ f9aa4260ebb34ecca3b2629db06adfe4 *R/hazard.R
 cee83bc3704b5fd59d818e16b34a30d5 *R/nonparametric.R
 20a74e1ad04e56dd304ba25f9e87f46d *R/northrop.R
 be1ae7a0437bfab19cfca34d186647c9 *R/parametric.R
-5b3677e31856500d08ed389bde6c482a *R/plots.R
+19707e97ca635697d9b37ae06c43d0f5 *R/plots.R
 db7345a7721127ec52d6639f086035b7 *R/posterior.R
 891c1bf23f511f6926251be52888b27d *R/simulation.R
 1a65c1fc28f4b16c5c74cfc892210e6d *R/tests.R
-1570bdf2299f0b522e12b62d4e30689e *R/threshstab.R
+5e8a994f75c4b39330c71d188d1a4bb0 *R/threshstab.R
 1bf18d9c216b8d95033f0bd2fe2906b2 *build/partial.rdb
 5c4ab1c07e0cd9f6b39aef584a3c7687 *build/vignette.rds
 ad11982319f3e91c379a52177136ea75 *data/dutch.rda
@@ -26,10 +26,10 @@ d6e38ed23e3a8a91ff9b94b405f899bc *data/japanese.rda
 6131f72428b3cf1632a690b44ced49a8 *data/japanese2.rda
 ccf6db0721793cc9342b1126ebb0b039 *inst/doc/introduction.R
 cfd9d57cfb1e2604ec5b4fa552f7c1be *inst/doc/introduction.Rmd
-c92379db82966ace1795ee1f36864d51 *inst/doc/introduction.html
+94fa3f2d916911d699215cd9b4ef5ce2 *inst/doc/introduction.html
 abc8eb4295cbef67b32897eebfd7b29f *inst/doc/nonparametric.R
 c49521b0d1e0836fe2d9a87ec91d575d *inst/doc/nonparametric.Rmd
-228fe547f65a22737632de3cbf38cbb2 *inst/doc/nonparametric.html
+0fafeb76aafa488de3e5e16c7bf09acd *inst/doc/nonparametric.html
 e98fa576847ce939229f253f3717d495 *inst/tinytest/test-S3methods.R
 f21585adfe2dcb6ad62a4287527a0770 *inst/tinytest/test-anova.R
 83124cfcf3ddcec5600acd02bd78328b *inst/tinytest/test-distributions.R
