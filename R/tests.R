@@ -57,7 +57,8 @@ test_elife <- function(
       call = call,
       arguments = arguments
     )
-    return(do.call(test_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(test_elife, args = arguments, envir = caller_env))
   }
 
   family <- match.arg(family)
@@ -409,7 +410,8 @@ ks_test <- function(
       call = call,
       arguments = arguments
     )
-    return(do.call(ks_test, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(ks_test, args = arguments, envir = caller_env))
   }
   # Exclude doubly interval truncated data
   if (

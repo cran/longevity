@@ -124,7 +124,8 @@ np_elife <- function(time,
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = np_elife, call = call, arguments = arguments)
-    return(do.call(np_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(np_elife, args = arguments, envir = caller_env))
   }
   type <- match.arg(type)
   method <- match.arg(method)
@@ -707,7 +708,8 @@ npsurv <- function(time,
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = npsurv, call = call, arguments = arguments)
-    return(do.call(npsurv, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(npsurv, args = arguments, envir = caller_env))
   }
   stopifnot("`time` must be a numeric vector." = is.numeric(time))
   args <- list(...)

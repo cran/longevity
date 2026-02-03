@@ -74,7 +74,8 @@ hazard_elife <- function(x,
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = hazard_elife, call = call, arguments = arguments)
-    return(do.call(hazard_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(hazard_elife, args = arguments, envir = caller_env))
   }
   stopifnot("The level of the confidence interval must be in [0,1]" = level > 0 && level < 1,
             "Level should be a numeric of length one" = length(level) == 1L,

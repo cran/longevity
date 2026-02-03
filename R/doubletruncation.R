@@ -43,7 +43,8 @@ nll_ditrunc_elife <-
     if(!is.null(arguments)){
       call <- match.call(expand.dots = FALSE)
       arguments <- check_arguments(func = nll_ditrunc_elife, call = call, arguments = arguments)
-      return(do.call(nll_ditrunc_elife, args = arguments))
+      caller_env <- parent.frame()
+      return(do.call(nll_ditrunc_elife, args = arguments, envir = caller_env))
     }
 
   family <- match.arg(family)
@@ -252,7 +253,8 @@ fit_ditrunc_elife <- function(
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = fit_ditrunc_elife, call = call, arguments = arguments)
-    return(do.call(fit_ditrunc_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(fit_ditrunc_elife, args = arguments, envir = caller_env))
   }
   stopifnot("Argument `restart` should be a logical vector" = is.logical(restart) & length(restart) == 1L)
   if(is.null(weights)){
@@ -553,7 +555,8 @@ test_ditrunc_elife <- function(time,
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = test_ditrunc_elife, call = call, arguments = arguments)
-    return(do.call(test_ditrunc_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(test_ditrunc_elife, args = arguments, envir = caller_env))
   }
   family <- match.arg(family)
   stopifnot("Covariate must be provided" = !missing(covariate),

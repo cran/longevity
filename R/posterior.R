@@ -164,7 +164,8 @@ lpost_elife <- function(par,
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = lpost_elife, call = call, arguments = arguments)
-    return(do.call(lpost_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(lpost_elife, args = arguments, envir = caller_env))
   }
   type <- match.arg(type)
   family <- match.arg(family)

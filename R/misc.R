@@ -201,13 +201,11 @@ check_arguments <- function(func, call, arguments = NULL) {
   new.arguments <- arguments.default
   # Override any default argument with the values in arguments
   new.arguments[names(arguments)] <- arguments
-  # Function from https://stackoverflow.com/a/51389399
-  to_list <- function(x) {
-    xex <- parse(text = x)[[1]]
-    xex[[1]] <- quote(list)
-    eval.parent(xex)
-  }
-  supplied.arguments <- to_list(deparse(call[names(call) != "arguments"]))
+  
+  # Get supplied arguments from the call without evaluating
+  supplied.arguments <- as.list(call[-1])
+  supplied.arguments[["arguments"]] <- NULL
+  
   new.arguments[names(supplied.arguments)] <- supplied.arguments
   stopifnot(
     "Mandatory \"time\" vector not supplied." = !is.null(new.arguments$time)

@@ -41,7 +41,8 @@ endpoint.profile <- function(
       call = call,
       arguments = arguments
     )
-    return(do.call(endpoint.profile, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(endpoint.profile, args = arguments, envir = caller_env))
   }
   stopifnot(
     "Argument \"psi\" must be provided (currently NULL)" = !is.null(psi),
@@ -170,7 +171,8 @@ endpoint.tstab <- function(
       call = call,
       arguments = arguments
     )
-    return(do.call(endpoint.tstab, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(endpoint.tstab, args = arguments, envir = caller_env))
   }
   if (length(thresh) <= 1) {
     stop("Vector \"thresh\" must contain multiple thresholds.")

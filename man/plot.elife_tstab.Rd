@@ -29,6 +29,9 @@ the fitted parameters as a function of threshold}
 
 \item{plot}{logical; if \code{TRUE}, creates a plot when \code{plot.type="ggplot"}. Useful for returning \code{ggplot} objects without printing the graphs}
 }
+\value{
+This S3 method is used to create plots; it only returns a list of graphs if \code{plot.type="ggplot"}
+}
 \description{
 Threshold stability plots
 }

@@ -361,7 +361,8 @@ nc_test <- function(
       call = call,
       arguments = arguments
     )
-    return(do.call(nc_test, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(nc_test, args = arguments, envir = caller_env))
   }
 
   # Exclude doubly interval truncated data

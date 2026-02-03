@@ -60,7 +60,8 @@ tstab <- function(
       call = call,
       arguments = arguments
     )
-    return(do.call(tstab, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(tstab, args = arguments, envir = caller_env))
   }
   family <- match.arg(family)
   method <- match.arg(method)
@@ -216,6 +217,7 @@ tstab <- function(
 #' @param x an object of class \code{elife_tstab} containing
 #' the fitted parameters as a function of threshold
 #' @inheritParams plot.elife_par
+#' @return This S3 method is used to create plots; it only returns a list of graphs if \code{plot.type="ggplot"}
 #' @export
 plot.elife_tstab <- function(
   x,
@@ -385,7 +387,8 @@ prof_gp_shape <-
         call = call,
         arguments = arguments
       )
-      return(do.call(prof_gp_shape, args = arguments))
+      caller_env <- parent.frame()
+      return(do.call(prof_gp_shape, args = arguments, envir = caller_env))
     }
     if (is.null(weights)) {
       weights <- rep(1, length(time))
@@ -507,7 +510,8 @@ prof_gp_scalet <-
         call = call,
         arguments = arguments
       )
-      return(do.call(prof_gp_scalet, args = arguments))
+      caller_env <- parent.frame()
+      return(do.call(prof_gp_scalet, args = arguments, envir = caller_env))
     }
 
     if (is.null(weights)) {
@@ -638,7 +642,8 @@ prof_exp_scale <- function(
       call = call,
       arguments = arguments
     )
-    return(do.call(prof_exp_scale, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(prof_exp_scale, args = arguments, envir = caller_env))
   }
   type <- match.arg(type)
   stopifnot(

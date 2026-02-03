@@ -55,7 +55,8 @@ nll_elife <- function(par,
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = "nll_elife", call = call, arguments = arguments)
-    return(do.call(nll_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(nll_elife, args = arguments, envir = caller_env))
   }
   if(is.null(time)){
     stop("argument \"time\" is missing, with no default")
@@ -338,7 +339,8 @@ fit_elife <- function(time,
   if(!is.null(arguments)){
     call <- match.call(expand.dots = FALSE)
     arguments <- check_arguments(func = fit_elife, call = call, arguments = arguments)
-    return(do.call(fit_elife, args = arguments))
+    caller_env <- parent.frame()
+    return(do.call(fit_elife, args = arguments, envir = caller_env))
   }
 
   stopifnot("Argument `restart` should be a logical vector" = is.logical(restart) & length(restart) == 1L)
